@@ -1,4 +1,7 @@
-package sh.stefan.dragnevar.ravengard.label
+package sh.stefan.dragnevar.ravengard.item.type
+
+import sh.stefan.dragnevar.ravengard.item.EquipmentSlot
+import sh.stefan.dragnevar.ravengard.RavengardLabel
 
 enum class ArmorType(
     override val character: Char,

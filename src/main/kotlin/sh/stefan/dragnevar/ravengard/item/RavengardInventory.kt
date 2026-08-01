@@ -10,9 +10,14 @@ class RavengardInventory private constructor(
 ) {
     fun bestItems(): List<Entry> {
         return entries
+            .filterNot { it.item is RavengardConsumable }
             .groupBy { it.item.group }
             .values
             .map { it.maxWith(::compareEntries) }
+    }
+
+    fun consumables(): List<Entry> {
+        return entries.filter { it.item is RavengardConsumable }
     }
 
     private fun compareEntries(first: Entry, second: Entry): Int {

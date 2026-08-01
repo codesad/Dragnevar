@@ -1,4 +1,4 @@
-package sh.stefan.dragnevar.ravengard.label
+package sh.stefan.dragnevar.ravengard.item
 
 // these match slot.containerSlot, not slot.index; e.g. boots stay 36 even if their menu index shifts
 enum class EquipmentSlot(val inventoryIndex: Int) {

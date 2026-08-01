@@ -1,6 +1,4 @@
-package sh.stefan.dragnevar.ravengard.label
-
-import sh.stefan.dragnevar.ravengard.Profile
+package sh.stefan.dragnevar.ravengard
 
 enum class ProfileLabel(
     override val character: Char,

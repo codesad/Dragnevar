@@ -1,8 +1,8 @@
 package sh.stefan.dragnevar.ravengard.item
 
 import net.minecraft.world.item.ItemStack
-import sh.stefan.dragnevar.ravengard.label.Rarity
-import sh.stefan.dragnevar.ravengard.label.WeaponType
+import sh.stefan.dragnevar.ravengard.Rarity
+import sh.stefan.dragnevar.ravengard.item.type.WeaponType
 
 class RavengardWeapon private constructor(
     stack: ItemStack,

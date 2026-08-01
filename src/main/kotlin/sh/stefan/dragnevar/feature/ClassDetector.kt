@@ -3,6 +3,7 @@ package sh.stefan.dragnevar.feature
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen
 import net.minecraft.world.item.ItemStack
 import sh.stefan.dragnevar.ravengard.Profile
+import sh.stefan.dragnevar.ravengard.findByName
 import sh.stefan.dragnevar.utils.Chat
 
 object ClassDetector : Feature(), ContainerOpenFeature {
@@ -29,6 +30,6 @@ object ClassDetector : Feature(), ContainerOpenFeature {
     private fun parseProfile(item: ItemStack): Profile? {
         val name = Chat.stripFormatting(item.hoverName.string)
             .substringAfterLast(" - ", missingDelimiterValue = "")
-        return Profile.parse(name)
+        return Profile.entries.findByName(name)
     }
 }

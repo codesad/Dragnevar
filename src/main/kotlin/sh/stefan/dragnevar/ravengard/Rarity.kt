@@ -1,4 +1,4 @@
-package sh.stefan.dragnevar.ravengard.label
+package sh.stefan.dragnevar.ravengard
 
 enum class Rarity(override val character: Char) : RavengardLabel {
     COMMON('\uE203'),

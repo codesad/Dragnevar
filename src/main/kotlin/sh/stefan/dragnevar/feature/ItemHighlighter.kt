@@ -7,17 +7,18 @@ import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 import sh.stefan.dragnevar.ravengard.Profile
-import sh.stefan.dragnevar.ravengard.label.ArmorType
 import sh.stefan.dragnevar.ravengard.item.RavengardArmor
 import sh.stefan.dragnevar.ravengard.item.RavengardInventory
 import sh.stefan.dragnevar.ravengard.item.RavengardItem
 import sh.stefan.dragnevar.ravengard.item.RavengardItemData
 import sh.stefan.dragnevar.ravengard.item.RavengardItemGroup
+import sh.stefan.dragnevar.ravengard.item.type.ArmorType
 
 object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
     private const val ARMOR_COLOR = 0x80007BFF.toInt()
     private const val ACCESSORY_COLOR = 0x8000E65C.toInt()
     private const val WEAPON_COLOR = 0x80B000FF.toInt()
+    private const val CONSUMABLE_COLOR = 0x80F54927.toInt()
 
     // only one menu can be open, so there's only one state to cache
     private var menuState: MenuState? = null
@@ -63,7 +64,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         } else {
             emptyMap()
         }
-        val highlightedSlots = findBestSlots(inventory, equippedArmor)
+        val highlightedSlots = findHighlightedSlots(inventory, equippedArmor)
 
         menuState = MenuState(menu, snapshot, highlightedSlots)
     }
@@ -105,11 +106,11 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         )
     }
 
-    private fun findBestSlots(
+    private fun findHighlightedSlots(
         inventory: RavengardInventory,
         equippedArmor: Map<ArmorType, RavengardArmor>
     ): Map<Int, Int> {
-        return inventory.bestItems()
+        return (inventory.bestItems() + inventory.consumables())
             .filter { isBetterThanEquippedArmor(it.item, equippedArmor) }
             .associate { it.menuSlotIndex to colorOf(it.item) }
     }
@@ -142,6 +143,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         return when (item.group) {
             is RavengardItemGroup.Armor -> ARMOR_COLOR
             is RavengardItemGroup.Accessory -> ACCESSORY_COLOR
+            is RavengardItemGroup.Consumable -> CONSUMABLE_COLOR
             RavengardItemGroup.Weapon -> WEAPON_COLOR
         }
     }

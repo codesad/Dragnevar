@@ -1,4 +1,6 @@
-package sh.stefan.dragnevar.ravengard.label
+package sh.stefan.dragnevar.ravengard.item.type
+
+import sh.stefan.dragnevar.ravengard.RavengardLabel
 
 enum class WeaponType(override val character: Char) : RavengardLabel {
     BOW('\uE201'),

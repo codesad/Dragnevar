@@ -7,6 +7,7 @@ internal interface RavengardItemParser<out T : RavengardItem> {
 internal object RavengardItemFactory {
     // the first parser that recognizes the item gets to create it
     private val parsers: List<RavengardItemParser<RavengardItem>> = listOf(
+        RavengardConsumable,
         RavengardWeapon,
         RavengardArmor,
         RavengardAccessory
