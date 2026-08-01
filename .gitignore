@@ -1,0 +1,36 @@
+# Gradle and Kotlin
+.gradle/
+.kotlin/
+build/
+out/
+bin/
+
+# Fabric Loom / Minecraft runtime
+run/
+.fabric/
+logs/
+crash-reports/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Local configuration
+local.properties
+*.local
+.env
+.env.*
+
+# Java crash and profiling files
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Keep the Gradle wrapper JAR committed
+!gradle/wrapper/gradle-wrapper.jar

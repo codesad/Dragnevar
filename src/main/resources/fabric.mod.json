@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "id": "dragnevar",
+  "version": "${version}",
+  "name": "Dragnevar",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/dragnevar/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "main": [
+      "sh.stefan.dragnevar.Dragnevar"
+    ]
+  },
+  "mixins": [
+    "dragnevar.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-language-kotlin": ">=${kotlin_loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}

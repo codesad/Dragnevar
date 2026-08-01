@@ -1,0 +1,38 @@
+package sh.stefan.dragnevar.ravengard.item
+
+import net.minecraft.world.item.ItemStack
+import sh.stefan.dragnevar.ravengard.label.AccessoryType
+import sh.stefan.dragnevar.ravengard.label.Rarity
+
+class RavengardAccessory private constructor(
+    stack: ItemStack,
+    rarity: Rarity,
+    val type: AccessoryType
+) : RavengardItem(stack, rarity) {
+
+    override val idealSlot = type.equippedSlot
+    override val group = RavengardItemGroup.Accessory(type)
+
+    override fun compareWith(other: RavengardItem): Int {
+        require(other is RavengardAccessory && other.type == type) {
+            "Cannot compare $type accessory with ${other.group}"
+        }
+        return Comparator.compare(this, other)
+    }
+
+    companion object Comparator :
+        kotlin.Comparator<RavengardAccessory>,
+        RavengardItemParser<RavengardAccessory> {
+
+        override fun from(data: RavengardItemData): RavengardAccessory? {
+            val rarity = data.rarity ?: return null
+            val type = data.accessoryType ?: return null
+
+            return RavengardAccessory(data.stack, rarity, type)
+        }
+
+        override fun compare(first: RavengardAccessory, second: RavengardAccessory): Int {
+            return first.rarity.compareTo(second.rarity)
+        }
+    }
+}
