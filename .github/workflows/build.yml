@@ -35,8 +35,8 @@ jobs:
       - name: Upload mod JAR
         uses: actions/upload-artifact@v7
         with:
-          name: dragnevar-${{ github.sha }}
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar
+          archive: false
           if-no-files-found: error
