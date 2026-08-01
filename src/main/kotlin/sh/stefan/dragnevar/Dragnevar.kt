@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer
 import sh.stefan.dragnevar.feature.ClassDetector
 import sh.stefan.dragnevar.feature.FeatureManager
 import sh.stefan.dragnevar.feature.ItemHighlighter
+import sh.stefan.dragnevar.feature.ItemLoreCommand
 import java.util.logging.Logger
 
 class Dragnevar : ModInitializer {

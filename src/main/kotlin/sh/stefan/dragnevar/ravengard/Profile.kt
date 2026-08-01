@@ -4,5 +4,5 @@ enum class Profile(override val displayName: String) : RavengardName {
     WARRIOR("Warrior"),
     HUNTER("Hunter"),
     KNIGHT("Knight"),
-    RANGER("Ranger")
+    ASSASSIN("Assassin")
 }

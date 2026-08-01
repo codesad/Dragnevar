@@ -6,5 +6,6 @@ enum class ProfileLabel(
 ) : RavengardLabel {
     KNIGHT('\uE210', Profile.KNIGHT),
     WARRIOR('\uE21E', Profile.WARRIOR),
-    HUNTER('\uE221', Profile.HUNTER)
+    HUNTER('\uE221', Profile.HUNTER),
+    ASSASSIN('\uE200', Profile.ASSASSIN)
 }
