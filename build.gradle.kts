@@ -14,6 +14,7 @@ val minecraftVersion = providers.gradleProperty("minecraft_version").get()
 val loaderVersion = providers.gradleProperty("loader_version").get()
 val kotlinLoaderVersion = providers.gradleProperty("kotlin_loader_version").get()
 val fabricVersion = providers.gradleProperty("fabric_version").get()
+val yaclVersion = providers.gradleProperty("yacl_version").get()
 
 version = modVersion
 group = mavenGroup
@@ -32,11 +33,12 @@ java {
 }
 
 repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
+    maven("https://api.modrinth.com/maven") {
+        name = "Modrinth"
+        content {
+            includeGroup("maven.modrinth")
+        }
+    }
 }
 
 dependencies {
@@ -46,17 +48,18 @@ dependencies {
     implementation("net.fabricmc:fabric-language-kotlin:$kotlinLoaderVersion")
 
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
+    implementation("maven.modrinth:yacl:$yaclVersion")
 }
 
 tasks.processResources {
-    inputs.property("version", project.version)
+    inputs.property("version", modVersion)
     inputs.property("minecraft_version", minecraftVersion)
     inputs.property("loader_version", loaderVersion)
     filteringCharset = "UTF-8"
 
     filesMatching("fabric.mod.json") {
         expand(
-            "version" to project.version,
+            "version" to modVersion,
             "minecraft_version" to minecraftVersion,
             "loader_version" to loaderVersion,
             "kotlin_loader_version" to kotlinLoaderVersion

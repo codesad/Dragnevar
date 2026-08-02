@@ -1,0 +1,20 @@
+{
+  "key.dragnevar.ping": "Ping Waypoint",
+  "key.category.dragnevar.main": "Dragnevar",
+  "dragnevar.config.connection": "Connection",
+  "dragnevar.config.websocket_url": "WebSocket URL",
+  "dragnevar.config.websocket_url.description": "Address of the waypoint relay server.",
+  "dragnevar.config.team_name": "Team Name",
+  "dragnevar.config.team_name.description": "Players using the same team name share pings.",
+  "dragnevar.config.status.connected": "Status: Connected",
+  "dragnevar.config.status.disconnected": "Status: Disconnected",
+  "dragnevar.config.server": "Waypoint Server",
+  "dragnevar.config.connect.button": "Connect",
+  "dragnevar.config.disconnect.button": "Disconnect",
+  "dragnevar.config.waypoints": "Waypoints",
+  "dragnevar.config.behavior": "Behavior",
+  "dragnevar.config.timeout": "Waypoint Duration",
+  "dragnevar.config.timeout.description": "How long waypoint markers remain visible, in seconds.",
+  "dragnevar.config.ping_sound": "Ping Sound",
+  "dragnevar.config.show_distance": "Show Distance"
+}

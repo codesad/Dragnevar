@@ -1,10 +1,13 @@
 package sh.stefan.dragnevar
 
 import net.fabricmc.api.ModInitializer
+import sh.stefan.dragnevar.config.DragnevarConfig
 import sh.stefan.dragnevar.feature.ClassDetector
+import sh.stefan.dragnevar.feature.ConfigCommand
 import sh.stefan.dragnevar.feature.FeatureManager
 import sh.stefan.dragnevar.feature.ItemHighlighter
 import sh.stefan.dragnevar.feature.ItemLoreCommand
+import sh.stefan.dragnevar.feature.WaypointFeature
 import java.util.logging.Logger
 
 class Dragnevar : ModInitializer {
@@ -14,6 +17,13 @@ class Dragnevar : ModInitializer {
     }
 
     override fun onInitialize() {
-        FeatureManager.initialize(ClassDetector, ItemHighlighter)
+        DragnevarConfig.load()
+        FeatureManager.initialize(
+            ConfigCommand,
+            ClassDetector,
+            ItemHighlighter,
+            ItemLoreCommand,
+            WaypointFeature
+        )
     }
 }
