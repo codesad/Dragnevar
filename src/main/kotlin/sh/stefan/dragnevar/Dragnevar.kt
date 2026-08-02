@@ -7,6 +7,7 @@ import sh.stefan.dragnevar.feature.ConfigCommand
 import sh.stefan.dragnevar.feature.FeatureManager
 import sh.stefan.dragnevar.feature.ItemHighlighter
 import sh.stefan.dragnevar.feature.ItemLoreCommand
+import sh.stefan.dragnevar.feature.RavengardCheckCommand
 import sh.stefan.dragnevar.feature.WaypointFeature
 import java.util.logging.Logger
 
@@ -23,6 +24,7 @@ class Dragnevar : ModInitializer {
             ClassDetector,
             ItemHighlighter,
             ItemLoreCommand,
+            RavengardCheckCommand,
             WaypointFeature
         )
     }

@@ -30,6 +30,9 @@ class DragnevarConfigData {
     var weaponPriority = WeaponPriority.DPS
 
     @field:SerialEntry
+    var preventRavengardItemDrop = true
+
+    @field:SerialEntry
     var websocketUrl = ""
 
     @field:SerialEntry
@@ -88,6 +91,20 @@ object DragnevarConfig {
                         )
                     }
             }
+            .build()
+        val preventDropOption = Option.createBuilder<Boolean>()
+            .name(Component.translatable("dragnevar.config.prevent_item_drop"))
+            .description(
+                OptionDescription.of(
+                    Component.translatable("dragnevar.config.prevent_item_drop.description")
+                )
+            )
+            .binding(
+                defaults.preventRavengardItemDrop,
+                { config.preventRavengardItemDrop },
+                { config.preventRavengardItemDrop = it }
+            )
+            .controller(TickBoxControllerBuilder::create)
             .build()
         val urlOption = Option.createBuilder<String>()
             .name(Component.translatable("dragnevar.config.websocket_url"))
@@ -186,6 +203,12 @@ object DragnevarConfig {
                         OptionGroup.createBuilder()
                             .name(Component.translatable("dragnevar.config.item_highlighting"))
                             .option(weaponPriorityOption)
+                            .build()
+                    )
+                    .group(
+                        OptionGroup.createBuilder()
+                            .name(Component.translatable("dragnevar.config.item_behavior"))
+                            .option(preventDropOption)
                             .build()
                     )
                     .build()
