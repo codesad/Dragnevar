@@ -151,7 +151,7 @@ object DragnevarConfig {
             .controller(TickBoxControllerBuilder::create)
             .build()
 
-        val screen = YetAnotherConfigLib.createBuilder()
+        return YetAnotherConfigLib.createBuilder()
             .title(Component.literal("Dragnevar"))
             .category(
                 ConfigCategory.createBuilder()
@@ -177,16 +177,16 @@ object DragnevarConfig {
                     .build()
             )
             .save(handler::save)
+            .screenInit { screen ->
+                ScreenEvents.afterTick(screen).register {
+                    status.stateManager().sync()
+                    val isConnected = WaypointFeature.isConnected
+                    connectButton.setAvailable(!isConnected)
+                    disconnectButton.setAvailable(isConnected)
+                }
+            }
             .build()
             .generateScreen(parent)
-
-        ScreenEvents.afterTick(screen).register {
-            status.stateManager().sync()
-            val isConnected = WaypointFeature.isConnected
-            connectButton.setAvailable(!isConnected)
-            disconnectButton.setAvailable(isConnected)
-        }
-        return screen
     }
 
     private fun connectionStatus(): Component = Component.translatable(
