@@ -28,8 +28,10 @@ class RavengardItemData(val stack: ItemStack) {
     val defense: Double? = findNumber(DEFENSE_PATTERN)
     val damage: Double? = findNumber(DAMAGE_PATTERN)
     val attackSpeed: Double? = findNumber(ATTACK_SPEED_PATTERN)
-    val healing: Double? = findNumber(HEALING_PATTERN)
-    val healingDurationSeconds: Double? = findNumber(HEALING_DURATION_PATTERN)
+    val healing: Double? = consumableType?.let { findNumber(HEALING_PATTERN) }
+    val healingDurationSeconds: Double? = healing?.let {
+        findNumber(HEALING_DURATION_PATTERN)
+    }
     val price: Int? = lore.firstNotNullOfOrNull { line ->
         PRICE_PATTERN.find(line)
             ?.groupValues
