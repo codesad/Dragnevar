@@ -1,14 +1,13 @@
 package sh.stefan.dragnevar.ravengard.item
 
-import net.minecraft.world.item.ItemStack
 import sh.stefan.dragnevar.ravengard.Rarity
 import sh.stefan.dragnevar.ravengard.item.type.AccessoryType
 
 class RavengardAccessory private constructor(
-    stack: ItemStack,
+    data: RavengardItemData,
     rarity: Rarity,
     val type: AccessoryType
-) : RavengardItem(stack, rarity) {
+) : RavengardItem(data, rarity) {
 
     override val idealSlot = type.equippedSlot
     override val group = RavengardItemGroup.Accessory(type)
@@ -28,7 +27,7 @@ class RavengardAccessory private constructor(
             val rarity = data.rarity ?: return null
             val type = data.accessoryType ?: return null
 
-            return RavengardAccessory(data.stack, rarity, type)
+            return RavengardAccessory(data, rarity, type)
         }
 
         override fun compare(first: RavengardAccessory, second: RavengardAccessory): Int {

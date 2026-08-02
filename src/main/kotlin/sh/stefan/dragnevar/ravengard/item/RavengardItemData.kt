@@ -17,21 +17,26 @@ class RavengardItemData(val stack: ItemStack) {
     private val name = stack.hoverName.string
     private val lore = stack.get(DataComponents.LORE)?.lines()?.map { it.string }.orEmpty()
 
-    // ravengard labels can show up in either the item's name or its lore
-    private val text = listOf(name) + lore
-
-    val rarity: Rarity? = Rarity.entries.findIn(text)
+    val rarity: Rarity? = Rarity.entries.findIn(lore)
     val profiles: Set<Profile> = ProfileLabel.entries
-        .findAllIn(text)
+        .findAllIn(lore)
         .mapTo(mutableSetOf(), ProfileLabel::profile)
-    val armorType: ArmorType? = ArmorType.entries.findIn(text)
-    val accessoryType: AccessoryType? = AccessoryType.entries.findIn(text)
-    val weaponType: WeaponType? = WeaponType.entries.findIn(text)
+    val armorType: ArmorType? = ArmorType.entries.findIn(lore)
+    val accessoryType: AccessoryType? = AccessoryType.entries.findIn(lore)
+    val weaponType: WeaponType? = WeaponType.entries.findIn(lore)
     val consumableType: ConsumableType? = ConsumableType.entries.findByName(name)
     val defense: Double? = findNumber(DEFENSE_PATTERN)
     val damage: Double? = findNumber(DAMAGE_PATTERN)
     val attackSpeed: Double? = findNumber(ATTACK_SPEED_PATTERN)
     val healing: Double? = findNumber(HEALING_PATTERN)
+    val healingDurationSeconds: Double? = findNumber(HEALING_DURATION_PATTERN)
+    val price: Int? = lore.firstNotNullOfOrNull { line ->
+        PRICE_PATTERN.find(line)
+            ?.groupValues
+            ?.get(1)
+            ?.replace(",", "")
+            ?.toIntOrNull()
+    }
 
     // no profile labels means the item has no class requirement
     fun isCompatibleWith(profile: Profile): Boolean =
@@ -58,6 +63,14 @@ class RavengardItemData(val stack: ItemStack) {
         )
         val HEALING_PATTERN = Regex(
             """Heals:?\s*\+(\d+(?:\.\d+)?)\s*HP\b""",
+            RegexOption.IGNORE_CASE
+        )
+        val HEALING_DURATION_PATTERN = Regex(
+            """\bover\s+(\d+(?:\.\d+)?)\s+seconds?\b""",
+            RegexOption.IGNORE_CASE
+        )
+        val PRICE_PATTERN = Regex(
+            """\b(\d[\d,]*)\s+Crowns?\b""",
             RegexOption.IGNORE_CASE
         )
     }

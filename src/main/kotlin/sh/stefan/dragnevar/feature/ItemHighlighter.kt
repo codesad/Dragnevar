@@ -6,6 +6,7 @@ import net.minecraft.world.entity.player.Inventory
 import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
+import net.minecraft.network.chat.Component
 import sh.stefan.dragnevar.ravengard.Profile
 import sh.stefan.dragnevar.ravengard.item.RavengardArmor
 import sh.stefan.dragnevar.ravengard.item.RavengardInventory
@@ -13,12 +14,26 @@ import sh.stefan.dragnevar.ravengard.item.RavengardItem
 import sh.stefan.dragnevar.ravengard.item.RavengardItemData
 import sh.stefan.dragnevar.ravengard.item.RavengardItemGroup
 import sh.stefan.dragnevar.ravengard.item.type.ArmorType
+import sh.stefan.dragnevar.utils.ItemRender
 
 object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
-    private const val ARMOR_COLOR = 0x80007BFF.toInt()
-    private const val ACCESSORY_COLOR = 0x8000E65C.toInt()
-    private const val WEAPON_COLOR = 0x80B000FF.toInt()
-    private const val CONSUMABLE_COLOR = 0x80F54927.toInt()
+    private const val ARMOR_COLOR = 0xA0007BFF.toInt()
+    private const val ACCESSORY_COLOR = 0xA000E65C.toInt()
+    private const val WEAPON_COLOR = 0xA0B000FF.toInt()
+    private const val CONSUMABLE_COLOR = 0xA0F54927.toInt()
+    private const val PRICE_COLOR = 0xFFFFD700.toInt()
+    private const val HEALING_COLOR = 0xFFFF5555.toInt()
+    private const val HEALING_DURATION_COLOR = 0xFFFFFF55.toInt()
+    private const val TEXT_SCALE = 0.5f
+    private const val PROFILE_TEXT_Y_OFFSET = 11
+    private const val TEXT_BACKGROUND_COLOR = 0x60000000
+
+    private val PROFILE_COLORS = mapOf(
+        Profile.WARRIOR to 0xFFFF5555.toInt(),
+        Profile.HUNTER to 0xFF55FF55.toInt(),
+        Profile.KNIGHT to 0xFF55AAFF.toInt(),
+        Profile.ASSASSIN to 0xFFCC66FF.toInt()
+    )
 
     // only one menu can be open, so there's only one state to cache
     private var menuState: MenuState? = null
@@ -34,11 +49,6 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
 
     private fun refresh(menu: AbstractContainerMenu) {
         val profile = ClassDetector.currentProfile
-        if (profile == null) {
-            menuState = null
-            return
-        }
-
         val currentPlayer = player
         if (currentPlayer == null) {
             menuState = null
@@ -53,20 +63,26 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         val previousState = menuState
         if (previousState != null &&
             previousState.menu === menu &&
+            previousState.profile == profile &&
             previousState.snapshot == snapshot
         ) {
             return
         }
 
-        val inventory = RavengardInventory.from(menu, profile, playerInventory)
-        val equippedArmor = if (hasHiddenArmor) {
-            parseEquippedArmor(playerInventory, profile)
+        val itemOverlays = findItemOverlays(menu)
+        val highlightedSlots = if (profile != null) {
+            val inventory = RavengardInventory.from(menu, profile, playerInventory)
+            val equippedArmor = if (hasHiddenArmor) {
+                parseEquippedArmor(playerInventory, profile)
+            } else {
+                emptyMap()
+            }
+            findHighlightedSlots(inventory, equippedArmor)
         } else {
             emptyMap()
         }
-        val highlightedSlots = findHighlightedSlots(inventory, equippedArmor)
 
-        menuState = MenuState(menu, snapshot, highlightedSlots)
+        menuState = MenuState(menu, profile, snapshot, highlightedSlots, itemOverlays)
     }
 
     private fun snapshotOf(
@@ -95,24 +111,104 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         slot: Slot
     ) {
         val state = menuState?.takeIf { it.menu === menu } ?: return
-        val color = state.highlightedSlots[slot.index] ?: return
+        state.highlightedSlots[slot.index]?.let { highlight ->
+            ItemRender.drawOutline(
+                graphics,
+                slot.x,
+                slot.y,
+                highlight.outline,
+                highlight.color
+            )
+        }
+        state.itemOverlays[slot.index]?.let { overlay ->
+            ItemRender.drawTextBox(
+                graphics,
+                slot.x,
+                slot.y,
+                overlay.topLines,
+                TEXT_SCALE,
+                TEXT_BACKGROUND_COLOR
+            )
+            overlay.profileText?.let { profileText ->
+                ItemRender.drawTextBox(
+                    graphics,
+                    slot.x,
+                    slot.y + PROFILE_TEXT_Y_OFFSET,
+                    listOf(profileText),
+                    TEXT_SCALE,
+                    TEXT_BACKGROUND_COLOR
+                )
+            }
+        }
+    }
 
-        graphics.fill(
-            slot.x,
-            slot.y,
-            slot.x + 16,
-            slot.y + 16,
-            color
-        )
+    private fun findItemOverlays(menu: AbstractContainerMenu): Map<Int, ItemOverlay> {
+        return menu.slots.mapNotNull { slot ->
+            val stack = slot.item.takeUnless(ItemStack::isEmpty) ?: return@mapNotNull null
+            val data = RavengardItemData(stack)
+            if (data.price == null && data.healing == null && data.profiles.isEmpty()) {
+                return@mapNotNull null
+            }
+
+            slot.index to ItemOverlay(
+                topLines = topLines(data),
+                profileText = profileText(data.profiles)
+            )
+        }.toMap()
+    }
+
+    private fun topLines(data: RavengardItemData): List<Component> {
+        val healing = data.healing
+        if (healing != null) {
+            return buildList {
+                add(
+                    Component.literal(formatNumber(healing))
+                        .withColor(HEALING_COLOR and 0xFFFFFF)
+                )
+                data.healingDurationSeconds?.let { duration ->
+                    add(
+                        Component.literal("${formatNumber(duration)}s")
+                            .withColor(HEALING_DURATION_COLOR and 0xFFFFFF)
+                    )
+                }
+            }
+        }
+
+        return data.price?.let { price ->
+            listOf(Component.literal(price.toString()).withColor(PRICE_COLOR and 0xFFFFFF))
+        }.orEmpty()
+    }
+
+    private fun profileText(profiles: Set<Profile>): Component? {
+        val matchingProfiles = Profile.entries.filter(profiles::contains)
+        if (matchingProfiles.isEmpty()) return null
+
+        return Component.empty().also { text ->
+            matchingProfiles.forEach { profile ->
+                text.append(
+                    Component.literal(profile.displayName.first().toString())
+                        .withColor(PROFILE_COLORS.getValue(profile) and 0xFFFFFF)
+                )
+            }
+        }
+    }
+
+    private fun formatNumber(value: Double): String {
+        return if (value % 1.0 == 0.0) value.toLong().toString() else value.toString()
     }
 
     private fun findHighlightedSlots(
         inventory: RavengardInventory,
         equippedArmor: Map<ArmorType, RavengardArmor>
-    ): Map<Int, Int> {
+    ): Map<Int, ItemHighlight> {
         return (inventory.bestItems() + inventory.consumables())
             .filter { isBetterThanEquippedArmor(it.item, equippedArmor) }
-            .associate { it.menuSlotIndex to colorOf(it.item) }
+            .associate {
+                it.menuSlotIndex to ItemHighlight(
+                    color = colorOf(it.item),
+                    outline = ItemRender.outlineOf(it.item.stack)
+                )
+            }
     }
 
     private fun isBetterThanEquippedArmor(
@@ -150,7 +246,19 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
 
     private class MenuState(
         val menu: AbstractContainerMenu,
+        val profile: Profile?,
         val snapshot: List<Int>,
-        val highlightedSlots: Map<Int, Int>
+        val highlightedSlots: Map<Int, ItemHighlight>,
+        val itemOverlays: Map<Int, ItemOverlay>
+    )
+
+    private class ItemHighlight(
+        val color: Int,
+        val outline: List<ItemRender.OutlineSpan>
+    )
+
+    private class ItemOverlay(
+        val topLines: List<Component>,
+        val profileText: Component?
     )
 }

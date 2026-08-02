@@ -1,16 +1,15 @@
 package sh.stefan.dragnevar.ravengard.item
 
-import net.minecraft.world.item.ItemStack
 import sh.stefan.dragnevar.ravengard.Rarity
 import sh.stefan.dragnevar.ravengard.item.type.WeaponType
 
 class RavengardWeapon private constructor(
-    stack: ItemStack,
+    data: RavengardItemData,
     rarity: Rarity,
     val type: WeaponType,
     val damage: Double,
     val attackSpeed: Double
-) : RavengardItem(stack, rarity) {
+) : RavengardItem(data, rarity) {
 
     val dps = damage * attackSpeed
 
@@ -32,7 +31,7 @@ class RavengardWeapon private constructor(
             val damage = data.damage ?: return null
             val attackSpeed = data.attackSpeed ?: return null
 
-            return RavengardWeapon(data.stack, rarity, type, damage, attackSpeed)
+            return RavengardWeapon(data, rarity, type, damage, attackSpeed)
         }
 
         override fun compare(first: RavengardWeapon, second: RavengardWeapon): Int {

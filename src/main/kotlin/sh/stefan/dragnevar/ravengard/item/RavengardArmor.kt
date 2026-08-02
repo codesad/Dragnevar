@@ -1,15 +1,14 @@
 package sh.stefan.dragnevar.ravengard.item
 
-import net.minecraft.world.item.ItemStack
 import sh.stefan.dragnevar.ravengard.Rarity
 import sh.stefan.dragnevar.ravengard.item.type.ArmorType
 
 class RavengardArmor private constructor(
-    stack: ItemStack,
+    data: RavengardItemData,
     rarity: Rarity,
     val type: ArmorType,
     val defense: Double
-) : RavengardItem(stack, rarity) {
+) : RavengardItem(data, rarity) {
 
     override val idealSlot = type.equippedSlot
     override val group = RavengardItemGroup.Armor(type)
@@ -30,7 +29,7 @@ class RavengardArmor private constructor(
             val type = data.armorType ?: return null
             val defense = data.defense ?: return null
 
-            return RavengardArmor(data.stack, rarity, type, defense)
+            return RavengardArmor(data, rarity, type, defense)
         }
 
         override fun compare(first: RavengardArmor, second: RavengardArmor): Int {

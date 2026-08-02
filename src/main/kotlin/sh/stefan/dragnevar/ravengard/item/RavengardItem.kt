@@ -1,6 +1,6 @@
 package sh.stefan.dragnevar.ravengard.item
 
-import net.minecraft.world.item.ItemStack
+import sh.stefan.dragnevar.ravengard.Profile
 import sh.stefan.dragnevar.ravengard.Rarity
 import sh.stefan.dragnevar.ravengard.item.type.AccessoryType
 import sh.stefan.dragnevar.ravengard.item.type.ArmorType
@@ -16,9 +16,13 @@ sealed interface RavengardItemGroup {
 }
 
 sealed class RavengardItem(
-    val stack: ItemStack,
-    val rarity: Rarity
+    data: RavengardItemData,
+    val rarity: Rarity,
 ) {
+    val stack = data.stack
+    val price = data.price
+    val profiles: Set<Profile> = data.profiles
+
     abstract val idealSlot: EquipmentSlot?
     abstract val group: RavengardItemGroup
 

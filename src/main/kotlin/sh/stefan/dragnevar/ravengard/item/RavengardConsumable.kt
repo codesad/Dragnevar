@@ -1,15 +1,15 @@
 package sh.stefan.dragnevar.ravengard.item
 
-import net.minecraft.world.item.ItemStack
 import sh.stefan.dragnevar.ravengard.Rarity
 import sh.stefan.dragnevar.ravengard.item.type.ConsumableType
 
 class RavengardConsumable private constructor(
-    stack: ItemStack,
+    data: RavengardItemData,
     rarity: Rarity,
     val type: ConsumableType,
-    val healing: Double
-) : RavengardItem(stack, rarity) {
+    val healing: Double,
+    val healingDurationSeconds: Double?
+) : RavengardItem(data, rarity) {
 
     override val idealSlot = null
     override val group = RavengardItemGroup.Consumable(type)
@@ -30,7 +30,13 @@ class RavengardConsumable private constructor(
             val type = data.consumableType ?: return null
             val healing = data.healing ?: return null
 
-            return RavengardConsumable(data.stack, rarity, type, healing)
+            return RavengardConsumable(
+                data,
+                rarity,
+                type,
+                healing,
+                data.healingDurationSeconds
+            )
         }
 
         override fun compare(first: RavengardConsumable, second: RavengardConsumable): Int {
