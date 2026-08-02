@@ -48,6 +48,8 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
     }
 
     private fun refresh(menu: AbstractContainerMenu) {
+        if (!menu.carried.isEmpty) return
+
         val profile = ClassDetector.currentProfile
         val currentPlayer = player
         if (currentPlayer == null) {
@@ -89,19 +91,22 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         menu: AbstractContainerMenu,
         includeEquippedArmor: Boolean,
         playerInventory: Inventory
-    ): List<Int> {
+    ): MenuSnapshot {
         // hashing every tick is cheaper than parsing all the item lore every tick
-        return buildList {
-            menu.slots.mapTo(this) { ItemStack.hashItemAndComponents(it.item) }
-
-            if (includeEquippedArmor) {
-                ArmorType.entries.mapTo(this) { armorType ->
+        return MenuSnapshot(
+            slotHashes = menu.slots.associate { slot ->
+                slot.index to ItemStack.hashItemAndComponents(slot.item)
+            },
+            equippedArmorHashes = if (includeEquippedArmor) {
+                ArmorType.entries.map { armorType ->
                     ItemStack.hashItemAndComponents(
                         playerInventory.getItem(armorType.equippedSlot.inventoryIndex)
                     )
                 }
+            } else {
+                emptyList()
             }
-        }
+        )
     }
 
     @JvmStatic
@@ -111,6 +116,9 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         slot: Slot
     ) {
         val state = menuState?.takeIf { it.menu === menu } ?: return
+        val currentHash = ItemStack.hashItemAndComponents(slot.item)
+        if (state.snapshot.slotHashes[slot.index] != currentHash) return
+
         state.highlightedSlots[slot.index]?.let { highlight ->
             ItemRender.drawOutline(
                 graphics,
@@ -247,9 +255,14 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
     private class MenuState(
         val menu: AbstractContainerMenu,
         val profile: Profile?,
-        val snapshot: List<Int>,
+        val snapshot: MenuSnapshot,
         val highlightedSlots: Map<Int, ItemHighlight>,
         val itemOverlays: Map<Int, ItemOverlay>
+    )
+
+    private data class MenuSnapshot(
+        val slotHashes: Map<Int, Int>,
+        val equippedArmorHashes: List<Int>
     )
 
     private class ItemHighlight(
