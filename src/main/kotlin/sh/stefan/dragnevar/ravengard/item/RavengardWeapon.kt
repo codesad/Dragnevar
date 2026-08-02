@@ -12,6 +12,8 @@ class RavengardWeapon private constructor(
     val attackSpeed: Double
 ) : RavengardItem(stack, rarity) {
 
+    val dps = damage * attackSpeed
+
     override val idealSlot = null
     override val group = RavengardItemGroup.Weapon
 
@@ -37,8 +39,7 @@ class RavengardWeapon private constructor(
             return compareValuesBy(
                 first,
                 second,
-                RavengardWeapon::damage,
-                RavengardWeapon::attackSpeed,
+                RavengardWeapon::dps,
                 RavengardWeapon::rarity
             )
         }
