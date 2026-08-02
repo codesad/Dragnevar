@@ -1,6 +1,12 @@
 {
   "key.dragnevar.ping": "Ping Waypoint",
   "key.category.dragnevar.main": "Dragnevar",
+  "dragnevar.config.items": "Items",
+  "dragnevar.config.item_highlighting": "Item Highlighting",
+  "dragnevar.config.weapon_priority": "Weapon Priority",
+  "dragnevar.config.weapon_priority.description": "DPS uses damage multiplied by attack speed. Damage prioritizes raw damage, using attack speed only to break ties.",
+  "dragnevar.config.weapon_priority.dps": "DPS",
+  "dragnevar.config.weapon_priority.damage": "Damage",
   "dragnevar.config.connection": "Connection",
   "dragnevar.config.websocket_url": "WebSocket URL",
   "dragnevar.config.websocket_url.description": "Address of the waypoint relay server.",

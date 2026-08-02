@@ -8,6 +8,7 @@ import dev.isxander.yacl3.api.OptionDescription
 import dev.isxander.yacl3.api.OptionGroup
 import dev.isxander.yacl3.api.StateManager
 import dev.isxander.yacl3.api.YetAnotherConfigLib
+import dev.isxander.yacl3.api.controller.EnumControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.StringControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
@@ -25,6 +26,9 @@ import sh.stefan.dragnevar.feature.WaypointFeature
 import sh.stefan.dragnevar.utils.Chat
 
 class DragnevarConfigData {
+    @field:SerialEntry
+    var weaponPriority = WeaponPriority.DPS
+
     @field:SerialEntry
     var websocketUrl = ""
 
@@ -63,6 +67,28 @@ object DragnevarConfig {
         val config = values
         val defaults = handler.defaults()
         val connected = WaypointFeature.isConnected
+        val weaponPriorityOption = Option.createBuilder<WeaponPriority>()
+            .name(Component.translatable("dragnevar.config.weapon_priority"))
+            .description(
+                OptionDescription.of(
+                    Component.translatable("dragnevar.config.weapon_priority.description")
+                )
+            )
+            .binding(
+                defaults.weaponPriority,
+                { config.weaponPriority },
+                { config.weaponPriority = it }
+            )
+            .controller { option ->
+                EnumControllerBuilder.create(option)
+                    .enumClass(WeaponPriority::class.java)
+                    .formatValue { priority ->
+                        Component.translatable(
+                            "dragnevar.config.weapon_priority.${priority.name.lowercase()}"
+                        )
+                    }
+            }
+            .build()
         val urlOption = Option.createBuilder<String>()
             .name(Component.translatable("dragnevar.config.websocket_url"))
             .description(
@@ -153,6 +179,17 @@ object DragnevarConfig {
 
         return YetAnotherConfigLib.createBuilder()
             .title(Component.literal("Dragnevar"))
+            .category(
+                ConfigCategory.createBuilder()
+                    .name(Component.translatable("dragnevar.config.items"))
+                    .group(
+                        OptionGroup.createBuilder()
+                            .name(Component.translatable("dragnevar.config.item_highlighting"))
+                            .option(weaponPriorityOption)
+                            .build()
+                    )
+                    .build()
+            )
             .category(
                 ConfigCategory.createBuilder()
                     .name(Component.translatable("dragnevar.config.waypoints"))

@@ -1,5 +1,7 @@
 package sh.stefan.dragnevar.ravengard.item
 
+import sh.stefan.dragnevar.config.DragnevarConfig
+import sh.stefan.dragnevar.config.WeaponPriority
 import sh.stefan.dragnevar.ravengard.Rarity
 import sh.stefan.dragnevar.ravengard.item.type.WeaponType
 
@@ -35,12 +37,22 @@ class RavengardWeapon private constructor(
         }
 
         override fun compare(first: RavengardWeapon, second: RavengardWeapon): Int {
-            return compareValuesBy(
-                first,
-                second,
-                RavengardWeapon::dps,
-                RavengardWeapon::rarity
-            )
+            return when (DragnevarConfig.values.weaponPriority) {
+                WeaponPriority.DPS -> compareValuesBy(
+                    first,
+                    second,
+                    RavengardWeapon::dps,
+                    RavengardWeapon::rarity
+                )
+
+                WeaponPriority.DAMAGE -> compareValuesBy(
+                    first,
+                    second,
+                    RavengardWeapon::damage,
+                    RavengardWeapon::attackSpeed,
+                    RavengardWeapon::rarity
+                )
+            }
         }
     }
 }

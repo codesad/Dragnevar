@@ -7,6 +7,8 @@ import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
 import net.minecraft.network.chat.Component
+import sh.stefan.dragnevar.config.DragnevarConfig
+import sh.stefan.dragnevar.config.WeaponPriority
 import sh.stefan.dragnevar.ravengard.Profile
 import sh.stefan.dragnevar.ravengard.item.RavengardArmor
 import sh.stefan.dragnevar.ravengard.item.RavengardInventory
@@ -51,6 +53,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         if (!menu.carried.isEmpty) return
 
         val profile = ClassDetector.currentProfile
+        val weaponPriority = DragnevarConfig.values.weaponPriority
         val currentPlayer = player
         if (currentPlayer == null) {
             menuState = null
@@ -66,6 +69,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         if (previousState != null &&
             previousState.menu === menu &&
             previousState.profile == profile &&
+            previousState.weaponPriority == weaponPriority &&
             previousState.snapshot == snapshot
         ) {
             return
@@ -84,7 +88,14 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
             emptyMap()
         }
 
-        menuState = MenuState(menu, profile, snapshot, highlightedSlots, itemOverlays)
+        menuState = MenuState(
+            menu,
+            profile,
+            weaponPriority,
+            snapshot,
+            highlightedSlots,
+            itemOverlays
+        )
     }
 
     private fun snapshotOf(
@@ -255,6 +266,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
     private class MenuState(
         val menu: AbstractContainerMenu,
         val profile: Profile?,
+        val weaponPriority: WeaponPriority,
         val snapshot: MenuSnapshot,
         val highlightedSlots: Map<Int, ItemHighlight>,
         val itemOverlays: Map<Int, ItemOverlay>
