@@ -1,10 +1,12 @@
-package sh.stefan.dragnevar.feature
+package sh.stefan.dragnevar.feature.dev
 
 import com.mojang.brigadier.CommandDispatcher
 import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
+import sh.stefan.dragnevar.feature.CommandFeature
+import sh.stefan.dragnevar.feature.Feature
 
 object ItemLoreCommand : Feature(), CommandFeature {
     override fun registerCommands(dispatcher: CommandDispatcher<FabricClientCommandSource>) {
