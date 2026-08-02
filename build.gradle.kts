@@ -16,7 +16,7 @@ val kotlinLoaderVersion = providers.gradleProperty("kotlin_loader_version").get(
 val fabricVersion = providers.gradleProperty("fabric_version").get()
 val yaclVersion = providers.gradleProperty("yacl_version").get()
 
-version = modVersion
+version = "$modVersion+$minecraftVersion"
 group = mavenGroup
 
 base {
