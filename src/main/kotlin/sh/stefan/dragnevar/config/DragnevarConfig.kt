@@ -8,8 +8,11 @@ import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDropdown
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorSlider
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorText
 import io.github.notenoughupdates.moulconfig.annotations.ConfigOption
+import io.github.notenoughupdates.moulconfig.common.IMinecraft
 import io.github.notenoughupdates.moulconfig.common.text.StructuredText
+import io.github.notenoughupdates.moulconfig.gui.MoulConfigEditor
 import io.github.notenoughupdates.moulconfig.managed.ManagedConfig
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.loader.api.FabricLoader
 import sh.stefan.dragnevar.Dragnevar
 import java.io.File
@@ -140,10 +143,16 @@ object DragnevarConfig {
                 Dragnevar.LOGGER.log(Level.WARNING, "Could not save the config.", error)
             }
         }
+        ClientLifecycleEvents.CLIENT_STOPPING.register { save() }
     }
 
     fun openScreen() {
-        managed.openConfigGui()
+        val editor = object : MoulConfigEditor<DragnevarConfigData>(managed.processor) {
+            override fun onAfterClose() {
+                save()
+            }
+        }
+        IMinecraft.INSTANCE.openWrappedScreen(editor)
     }
 
     fun save() {
