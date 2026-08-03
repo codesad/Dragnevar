@@ -51,7 +51,7 @@ interface HudRenderFeature {
 }
 
 interface WorldConnectionFeature {
-    fun onWorldJoin()
+    fun onWorldJoin() {}
 
     fun onWorldLeave() {}
 }

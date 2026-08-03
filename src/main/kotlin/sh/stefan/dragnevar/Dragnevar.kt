@@ -8,6 +8,7 @@ import sh.stefan.dragnevar.feature.ClassDetector
 import sh.stefan.dragnevar.feature.ConfigCommand
 import sh.stefan.dragnevar.feature.FeatureManager
 import sh.stefan.dragnevar.feature.ItemHighlighter
+import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.feature.WaypointFeature
 import sh.stefan.dragnevar.feature.dev.ItemLoreCommand
 import sh.stefan.dragnevar.feature.dev.RavengardCheckCommand
@@ -31,6 +32,7 @@ class Dragnevar : ModInitializer {
             add(ConfigCommand)
             add(ClassDetector)
             add(ItemHighlighter)
+            add(TeamSyncFeature)
             add(WaypointFeature)
 
             if (FabricLoader.getInstance().isDevelopmentEnvironment) {

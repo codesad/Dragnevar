@@ -19,13 +19,13 @@ TEAM_SYNC_VERSION = os.getenv("TEAM_SYNC_VERSION", "1.2.0")
 @dataclass
 class Client:
     socket: ServerConnection
-    room: str
+    team_code: str
     player_id: str
     player_name: str
     last_ping: float = 0.0
 
 
-rooms: dict[str, set[ServerConnection]] = defaultdict(set)
+teams: dict[str, set[ServerConnection]] = defaultdict(set)
 clients: dict[ServerConnection, Client] = {}
 
 
@@ -33,13 +33,13 @@ async def send_error(socket: ServerConnection, message: str) -> None:
     await socket.send(json.dumps({"type": "error", "message": message}))
 
 
-async def join(socket: ServerConnection, message: dict) -> Client | None:
-    room = str(message.get("room", "")).strip()
+async def join_team(socket: ServerConnection, message: dict) -> Client | None:
+    team_code = str(message.get("teamCode", message.get("room", ""))).strip()
     player_id = str(message.get("playerId", "")).strip()
     player_name = str(message.get("playerName", "")).strip()
 
-    if not room or len(room) > 64:
-        await send_error(socket, "Invalid room")
+    if not team_code or len(team_code) > 64:
+        await send_error(socket, "Invalid team code")
         return None
     if not player_id or len(player_id) > 64:
         await send_error(socket, "Invalid player ID")
@@ -48,14 +48,14 @@ async def join(socket: ServerConnection, message: dict) -> Client | None:
         await send_error(socket, "Invalid player name")
         return None
 
-    client = Client(socket, room, player_id, player_name)
+    client = Client(socket, team_code, player_id, player_name)
     clients[socket] = client
-    rooms[room].add(socket)
+    teams[team_code].add(socket)
     await socket.send(
         json.dumps(
             {
                 "type": "joined",
-                "room": room,
+                "teamCode": team_code,
                 "version": TEAM_SYNC_VERSION,
             }
         )
@@ -103,7 +103,9 @@ async def relay_ping(client: Client, message: dict) -> None:
             **({"itemName": message["itemName"]} if "itemName" in message else {}),
         }
     )
-    teammates = [socket for socket in rooms[client.room] if socket is not client.socket]
+    teammates = [
+        socket for socket in teams[client.team_code] if socket is not client.socket
+    ]
     if teammates:
         await asyncio.gather(
             *(socket.send(payload) for socket in teammates),
@@ -132,9 +134,9 @@ async def handler(socket: ServerConnection) -> None:
             message_type = message.get("type")
             if client is None:
                 if message_type != "join":
-                    await send_error(socket, "Join a room first")
+                    await send_error(socket, "Join a team first")
                     continue
-                client = await join(socket, message)
+                client = await join_team(socket, message)
             elif message_type == "ping":
                 await relay_ping(client, message)
             else:
@@ -142,15 +144,15 @@ async def handler(socket: ServerConnection) -> None:
     finally:
         client = clients.pop(socket, None)
         if client is not None:
-            room = rooms[client.room]
-            room.discard(socket)
-            if not room:
-                rooms.pop(client.room, None)
+            team = teams[client.team_code]
+            team.discard(socket)
+            if not team:
+                teams.pop(client.team_code, None)
 
 
 async def main() -> None:
-    host = os.getenv("WAYPOINT_HOST", "0.0.0.0")
-    port = int(os.getenv("WAYPOINT_PORT", "8765"))
+    host = os.getenv("TEAM_SYNC_HOST", "0.0.0.0")
+    port = int(os.getenv("TEAM_SYNC_PORT", "8765"))
     async with serve(handler, host, port, max_size=MAX_MESSAGE_SIZE):
         print(
             f"Team Sync server {TEAM_SYNC_VERSION} listening on ws://{host}:{port}"

@@ -7,7 +7,7 @@ import io.github.notenoughupdates.moulconfig.gui.component.TextComponent
 import io.github.notenoughupdates.moulconfig.gui.editors.ComponentEditor
 import io.github.notenoughupdates.moulconfig.processor.ProcessedOption
 import sh.stefan.dragnevar.config.component.ConfigButton
-import sh.stefan.dragnevar.feature.WaypointFeature
+import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.teamsync.TeamSyncConnectionState
 import java.util.function.Supplier
 
@@ -25,7 +25,7 @@ class TeamSyncConnectionStatusEditor(option: ProcessedOption) : ComponentEditor(
     override fun getDelegate(): GuiComponent = component ?: wrapComponent(
         TextComponent(
             IMinecraft.INSTANCE.defaultFontRenderer,
-            Supplier { StructuredText.of(WaypointFeature.connectionState.displayText) },
+            Supplier { StructuredText.of(TeamSyncFeature.connectionState.displayText) },
             100,
             TextComponent.TextAlignment.CENTER,
             false,
@@ -50,15 +50,15 @@ class TeamSyncConnectionButtonEditor(option: ProcessedOption) : ComponentEditor(
             width = 72,
             text = {
                 if (
-                    WaypointFeature.isConnected ||
-                    WaypointFeature.connectionState is TeamSyncConnectionState.Connecting
+                    TeamSyncFeature.isConnected ||
+                    TeamSyncFeature.connectionState is TeamSyncConnectionState.Connecting
                 ) {
                     "Disconnect"
                 } else {
                     "Connect"
                 }
             },
-            action = WaypointFeature::toggleConnection
+            action = TeamSyncFeature::toggleConnection
         )
     ).also { component = it }
 }

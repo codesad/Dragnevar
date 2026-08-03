@@ -1,7 +1,6 @@
 package sh.stefan.dragnevar.feature
 
 import com.mojang.blaze3d.platform.InputConstants
-import net.fabricmc.loader.api.Version
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
@@ -17,14 +16,13 @@ import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import sh.stefan.dragnevar.Dragnevar
 import sh.stefan.dragnevar.config.DragnevarConfig
+import sh.stefan.dragnevar.teamsync.protocol.WaypointMessages
 import sh.stefan.dragnevar.utils.Chat
 import sh.stefan.dragnevar.utils.Gui
 import sh.stefan.dragnevar.utils.Keybinds
 import sh.stefan.dragnevar.utils.Render
 import sh.stefan.dragnevar.utils.Render.ScreenPosition
 import sh.stefan.dragnevar.waypoint.Waypoint
-import sh.stefan.dragnevar.waypoint.WaypointSocket
-import sh.stefan.dragnevar.teamsync.TeamSyncConnectionState
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
@@ -40,18 +38,14 @@ object WaypointFeature :
     private const val LABEL_COLOR = 0xFFFFFFFF.toInt()
 
     private val waypoints = ConcurrentHashMap<String, Waypoint>()
-    private val socket = WaypointSocket(
-        ::receiveWaypoint,
-        ::showStatus,
-        ::checkServerVersion
-    )
 
-    @Volatile
-    var connectionState: TeamSyncConnectionState = TeamSyncConnectionState.Disconnected
-        private set
-
-    val isConnected: Boolean
-        get() = socket.isConnected
+    init {
+        TeamSyncFeature.registerMessageHandler(
+            WaypointMessages.MESSAGE_TYPE
+        ) { message ->
+            WaypointMessages.parse(message)?.let(::receiveWaypoint)
+        }
+    }
 
     override val keyMapping = KeyMapping(
         "key.dragnevar.ping",
@@ -101,42 +95,7 @@ object WaypointFeature :
             }
     }
 
-    override fun onWorldJoin() {
-        val config = DragnevarConfig.values.teamSync.connection
-        if (config.websocketUrl.isBlank() || config.teamCode.isBlank()) return
-
-        connectConfigured().onFailure(::showConnectionError)
-    }
-
     override fun onWorldLeave() {
-        disconnect()
-    }
-
-    fun toggleConnection() {
-        if (isConnected || connectionState is TeamSyncConnectionState.Connecting) {
-            disconnect()
-            return
-        }
-
-        DragnevarConfig.save()
-        connectConfigured().onFailure(::showConnectionError)
-    }
-
-    private fun connectConfigured(): Result<Unit> {
-        val config = DragnevarConfig.values.teamSync.connection
-        return connect(config.websocketUrl, config.teamCode)
-    }
-
-    private fun connect(url: String, room: String): Result<Unit> = runCatching {
-        require(url.isNotBlank()) { "WebSocket URL cannot be empty." }
-        require(room.isNotBlank()) { "Team code cannot be empty." }
-        val player = Minecraft.getInstance().player
-            ?: error("Join a world before connecting.")
-        socket.connect(url, room, player.stringUUID, player.name.string)
-    }
-
-    fun disconnect() {
-        socket.disconnect()
         waypoints.clear()
     }
 
@@ -145,7 +104,7 @@ object WaypointFeature :
         level: ClientLevel,
         itemName: Component?
     ) {
-        if (!socket.isConnected) {
+        if (!TeamSyncFeature.isConnected) {
             Chat.showError(player, "Open /rgconfig and connect first.")
             return
         }
@@ -158,8 +117,9 @@ object WaypointFeature :
 
         val position = hit.blockPos
         val dimension = level.dimension().identifier().toString()
-        if (!socket.sendPing(position, dimension, itemName)) {
-            Chat.showError(player, "The waypoint connection isn't ready.")
+        val message = WaypointMessages.createPing(position, dimension, itemName)
+        if (!TeamSyncFeature.send(message)) {
+            Chat.showError(player, "The Team Sync connection isn't ready.")
             return
         }
 
@@ -255,47 +215,4 @@ object WaypointFeature :
         }
     }
 
-    private fun showStatus(state: TeamSyncConnectionState) {
-        connectionState = state
-        if (state !is TeamSyncConnectionState.Error) return
-
-        val client = Minecraft.getInstance()
-        client.execute {
-            client.player?.let { player ->
-                Chat.showError(player, state.message)
-            }
-        }
-    }
-
-    private fun checkServerVersion(serverVersion: String) {
-        val requiredVersion = runCatching { Version.parse(serverVersion) }
-            .getOrElse {
-                logger.warning("Team Sync returned an invalid version: $serverVersion")
-                return
-            }
-        if (Dragnevar.VERSION >= requiredVersion) return
-
-        val client = Minecraft.getInstance()
-        client.execute {
-            client.player?.let { player ->
-                Chat.showError(
-                    player,
-                    "Dragnevar ${Dragnevar.VERSION.friendlyString} is outdated for Team Sync. " +
-                        "Some features may be broken or missing. " +
-                        "Update to $serverVersion or newer."
-                )
-            }
-        }
-    }
-
-    private fun showConnectionError(error: Throwable) {
-        val message = error.message ?: "Could not connect."
-        connectionState = TeamSyncConnectionState.Error(message)
-        val client = Minecraft.getInstance()
-        client.execute {
-            client.player?.let { player ->
-                Chat.showError(player, message)
-            }
-        }
-    }
 }

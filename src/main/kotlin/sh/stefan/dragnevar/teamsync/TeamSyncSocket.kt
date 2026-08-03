@@ -1,19 +1,14 @@
-package sh.stefan.dragnevar.waypoint
+package sh.stefan.dragnevar.teamsync
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import com.mojang.serialization.JsonOps
-import net.minecraft.core.BlockPos
-import net.minecraft.network.chat.Component
-import net.minecraft.network.chat.ComponentSerialization
-import sh.stefan.dragnevar.teamsync.TeamSyncConnectionState
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.WebSocket
 import java.util.concurrent.CompletionStage
 
-class WaypointSocket(
-    private val onWaypoint: (Waypoint) -> Unit,
+class TeamSyncSocket(
+    private val onMessage: (JsonObject) -> Unit,
     private val onStatus: (TeamSyncConnectionState) -> Unit,
     private val onServerVersion: (String) -> Unit
 ) {
@@ -28,11 +23,11 @@ class WaypointSocket(
     val isConnected: Boolean
         get() = socket != null
 
-    fun connect(url: String, room: String, playerId: String, playerName: String) {
+    fun connect(url: String, teamCode: String, playerId: String, playerName: String) {
         disconnect()
         onStatus(TeamSyncConnectionState.Connecting)
         val id = ++connectionId
-        val join = JoinRequest(room, playerId, playerName)
+        val join = JoinRequest(teamCode, playerId, playerName)
 
         httpClient.newWebSocketBuilder()
             .buildAsync(URI.create(url), ConnectionListener(id, join))
@@ -55,20 +50,8 @@ class WaypointSocket(
         onStatus(TeamSyncConnectionState.Disconnected)
     }
 
-    fun sendPing(position: BlockPos, dimension: String, itemName: Component?): Boolean {
+    fun send(message: JsonObject): Boolean {
         val activeSocket = socket ?: return false
-        val message = JsonObject().apply {
-            addProperty("type", "ping")
-            addProperty("dimension", dimension)
-            addProperty("x", position.x)
-            addProperty("y", position.y)
-            addProperty("z", position.z)
-            itemName?.let {
-                ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, it)
-                    .result()
-                    .ifPresent { encoded -> add("itemName", encoded) }
-            }
-        }
         activeSocket.sendText(message.toString(), true)
         return true
     }
@@ -83,29 +66,8 @@ class WaypointSocket(
                 message.get("version")?.asString?.let(onServerVersion)
             }
             "error" -> onStatus(TeamSyncConnectionState.Error(message.string("message")))
-            "ping" -> parseWaypoint(message)?.let(onWaypoint)
+            else -> onMessage(message)
         }
-    }
-
-    private fun parseWaypoint(message: JsonObject): Waypoint? {
-        return runCatching {
-            Waypoint(
-                senderId = message.string("senderId"),
-                senderName = message.string("senderName"),
-                dimension = message.string("dimension"),
-                position = BlockPos(
-                    message.get("x").asInt,
-                    message.get("y").asInt,
-                    message.get("z").asInt
-                ),
-                itemName = message.get("itemName")?.let {
-                    ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, it)
-                        .result()
-                        .orElse(null)
-                },
-                expiresAt = 0
-            )
-        }.getOrNull()
     }
 
     private fun JsonObject.string(name: String): String = get(name).asString
@@ -125,7 +87,7 @@ class WaypointSocket(
             socket = webSocket
             val message = JsonObject().apply {
                 addProperty("type", "join")
-                addProperty("room", join.room)
+                addProperty("teamCode", join.teamCode)
                 addProperty("playerId", join.playerId)
                 addProperty("playerName", join.playerName)
             }
@@ -175,7 +137,7 @@ class WaypointSocket(
     }
 
     private data class JoinRequest(
-        val room: String,
+        val teamCode: String,
         val playerId: String,
         val playerName: String
     )
