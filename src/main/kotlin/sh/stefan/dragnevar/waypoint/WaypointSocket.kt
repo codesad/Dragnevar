@@ -6,6 +6,7 @@ import com.mojang.serialization.JsonOps
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.ComponentSerialization
+import sh.stefan.dragnevar.teamsync.TeamSyncConnectionState
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.WebSocket
@@ -13,7 +14,7 @@ import java.util.concurrent.CompletionStage
 
 class WaypointSocket(
     private val onWaypoint: (Waypoint) -> Unit,
-    private val onStatus: (String) -> Unit
+    private val onStatus: (TeamSyncConnectionState) -> Unit
 ) {
     private val httpClient = HttpClient.newHttpClient()
 
@@ -28,6 +29,7 @@ class WaypointSocket(
 
     fun connect(url: String, room: String, playerId: String, playerName: String) {
         disconnect()
+        onStatus(TeamSyncConnectionState.Connecting)
         val id = ++connectionId
         val join = JoinRequest(room, playerId, playerName)
 
@@ -36,7 +38,9 @@ class WaypointSocket(
             .exceptionally { error ->
                 if (connectionId == id) {
                     onStatus(
-                        "Waypoint connection failed: ${error.cause?.message ?: error.message}"
+                        TeamSyncConnectionState.Error(
+                            error.cause?.message ?: error.message ?: "Could not connect."
+                        )
                     )
                 }
                 null
@@ -47,6 +51,7 @@ class WaypointSocket(
         connectionId++
         socket?.sendClose(WebSocket.NORMAL_CLOSURE, "disconnect")
         socket = null
+        onStatus(TeamSyncConnectionState.Disconnected)
     }
 
     fun sendPing(position: BlockPos, dimension: String, itemName: Component?): Boolean {
@@ -72,8 +77,8 @@ class WaypointSocket(
             .getOrNull() ?: return
 
         when (message.string("type")) {
-            "joined" -> onStatus("Joined waypoint room ${message.string("room")}")
-            "error" -> onStatus("Waypoint server: ${message.string("message")}")
+            "joined" -> onStatus(TeamSyncConnectionState.Connected)
+            "error" -> onStatus(TeamSyncConnectionState.Error(message.string("message")))
             "ping" -> parseWaypoint(message)?.let(onWaypoint)
         }
     }
@@ -148,7 +153,7 @@ class WaypointSocket(
             if (connectionId == id) {
                 socket = null
                 val detail = reason.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
-                onStatus("Waypoint connection closed$detail")
+                onStatus(TeamSyncConnectionState.Error("Connection closed$detail"))
             }
             return null
         }
@@ -157,7 +162,9 @@ class WaypointSocket(
             if (connectionId == id) {
                 socket = null
                 onStatus(
-                    "Waypoint connection error: ${error.message ?: error.javaClass.simpleName}"
+                    TeamSyncConnectionState.Error(
+                        error.message ?: error.javaClass.simpleName
+                    )
                 )
             }
         }

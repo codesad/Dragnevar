@@ -12,6 +12,9 @@ import io.github.notenoughupdates.moulconfig.common.text.StructuredText
 import io.github.notenoughupdates.moulconfig.managed.ManagedConfig
 import net.fabricmc.loader.api.FabricLoader
 import sh.stefan.dragnevar.Dragnevar
+import sh.stefan.dragnevar.config.component.ConfigEditorSizedButton
+import sh.stefan.dragnevar.config.component.SizedButtonEditor
+import sh.stefan.dragnevar.teamsync.TeamCode
 import java.io.File
 import java.util.function.BiConsumer
 import java.util.logging.Level
@@ -23,9 +26,9 @@ class DragnevarConfigData : Config() {
     var items = ItemConfig()
 
     @field:Expose
-    @field:Category(name = "Waypoints", desc = "Shared waypoint pings.")
+    @field:Category(name = "Team Sync", desc = "Features shared with your team.")
     @JvmField
-    var waypoints = WaypointConfig()
+    var teamSync = TeamSyncConfig()
 
     override fun getTitle(): StructuredText = StructuredText.of("Dragnevar")
 }
@@ -50,31 +53,60 @@ class ItemConfig {
     var preventRavengardItemDrop = true
 }
 
-class WaypointConfig {
+class TeamSyncConfig {
     @field:Expose
-    @field:ConfigOption(name = "WebSocket URL", desc = "Address of the waypoint relay server.")
-    @field:ConfigEditorText
+    @field:Category(name = "Connection", desc = "Team Sync server connection.")
     @JvmField
-    var websocketUrl = ""
+    var connection = TeamSyncConnectionConfig()
 
     @field:Expose
-    @field:ConfigOption(name = "Team Name", desc = "Players using the same team name share pings.")
+    @field:Category(name = "Waypoints", desc = "Shared waypoint pings.")
+    @JvmField
+    var waypoints = WaypointConfig()
+}
+
+class TeamSyncConnectionConfig {
+    @field:Expose
+    @field:ConfigOption(
+        name = "WebSocket URL",
+        desc = "Address of the Team Sync server.\nOnly change if self hosting!"
+    )
     @field:ConfigEditorText
     @JvmField
-    var teamName = ""
+    var websocketUrl = "wss://stephn.codes/dragnevar/"
 
-    @field:ConfigOption(name = "Status", desc = "Current waypoint server connection.")
-    @field:WaypointConnectionStatus
+    @field:Expose
+    @field:ConfigOption(name = "Team Code", desc = "Share this code with teammates to use Team Sync together.")
+    @field:ConfigEditorText
+    @JvmField
+    var teamCode = ""
+
+    @field:ConfigOption(name = "Generate Team Code", desc = "Creates a new random team code.")
+    @field:ConfigEditorSizedButton(text = "Generate", width = 72)
+    @Transient
+    @JvmField
+    var generateTeamCode = Runnable {
+        teamCode = TeamCode.generate()
+        DragnevarConfig.save()
+    }
+
+    @field:ConfigOption(
+        name = "Status",
+        desc = "Current Team Sync server connection."
+    )
+    @field:TeamSyncConnectionStatus
     @Transient
     @JvmField
     var connectionStatus = Unit
 
-    @field:ConfigOption(name = "Connection", desc = "Connects to or disconnects from the waypoint server.")
-    @field:WaypointConnectionButton
+    @field:ConfigOption(name = "Connection", desc = "Connects to or disconnects from Team Sync.")
+    @field:TeamSyncConnectionButton
     @Transient
     @JvmField
     var connectionAction = Unit
+}
 
+class WaypointConfig {
     @field:Expose
     @field:ConfigOption(name = "Waypoint Duration", desc = "How long waypoint markers remain visible, in seconds.")
     @field:ConfigEditorSlider(minValue = 5f, maxValue = 120f, minStep = 5f)
@@ -107,11 +139,14 @@ object DragnevarConfig {
         if (::managed.isInitialized) return
 
         managed = ManagedConfig.create(configFile, DragnevarConfigData::class.java) {
-            customProcessor(WaypointConnectionStatus::class.java) { option, _ ->
-                WaypointConnectionStatusEditor(option)
+            customProcessor(TeamSyncConnectionStatus::class.java) { option, _ ->
+                TeamSyncConnectionStatusEditor(option)
             }
-            customProcessor(WaypointConnectionButton::class.java) { option, _ ->
-                WaypointConnectionButtonEditor(option)
+            customProcessor(TeamSyncConnectionButton::class.java) { option, _ ->
+                TeamSyncConnectionButtonEditor(option)
+            }
+            customProcessor(ConfigEditorSizedButton::class.java) { option, annotation ->
+                SizedButtonEditor(option, annotation)
             }
             loadFailed = BiConsumer { _, error ->
                 Dragnevar.LOGGER.log(Level.WARNING, "Could not load the config.", error)

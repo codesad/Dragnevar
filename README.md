@@ -23,11 +23,13 @@ install:
 
 run `/rgconfig` in-game to open the config.
 
-for pings, everyone needs the same websocket url and team name. either use `wss://stephn.codes/dragnevar/` while it's available, or host `waypoint-server/server.py` yourself:
+for Team Sync, generate a team code and send it to your teammates. they can paste it into the Team Code field and connect.
+
+the included server is used by default. to host your own, run `waypoint-server/server.py`:
 
 ```sh
 pip install -r waypoint-server/requirements.txt
 python waypoint-server/server.py
 ```
 
-if you self-host, expose it through a `ws://` or `wss://` address your teammates can reach. use a unique team name to avoid joining someone else's room; it is not a password.
+if you self-host, expose it through a `ws://` or `wss://` address your teammates can reach and change the WebSocket URL in the config.
