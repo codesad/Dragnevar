@@ -12,7 +12,7 @@ import sh.stefan.dragnevar.teamsync.protocol.TeamMessages
 import sh.stefan.dragnevar.utils.Chat
 import java.util.concurrent.ConcurrentHashMap
 
-object TeamSyncFeature : Feature(), WorldConnectionFeature {
+object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature {
     private const val MESSAGE_PREFIX = "&b[TS] &r"
     private val messageHandlers = ConcurrentHashMap<String, (JsonObject) -> Unit>()
     private val teamMembers = ConcurrentHashMap<String, TeamMember>()
@@ -21,6 +21,7 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
         ::showStatus,
         ::checkServerVersion
     )
+    private var wasEnabled = DragnevarConfig.values.teamSync.enabled
 
     @Volatile
     var connectionState: TeamSyncConnectionState = TeamSyncConnectionState.Disconnected
@@ -29,18 +30,32 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
     val isConnected: Boolean
         get() = socket.isConnected
 
+    private val hasActiveConnection: Boolean
+        get() = isConnected || connectionState is TeamSyncConnectionState.Connecting
+
     val members: List<TeamMember>
         get() = teamMembers.values.sortedBy(TeamMember::playerName)
 
     override fun onWorldJoin() {
+        if (!DragnevarConfig.values.teamSync.enabled) return
+        if (hasActiveConnection) return
+
         val config = DragnevarConfig.values.teamSync.connection
         if (config.websocketUrl.isBlank() || config.teamCode.isBlank()) return
 
         connectConfigured().onFailure(::showConnectionError)
     }
 
-    override fun onWorldLeave() {
-        disconnect()
+    override fun onTick() {
+        val enabled = DragnevarConfig.values.teamSync.enabled
+        if (enabled == wasEnabled) return
+
+        wasEnabled = enabled
+        if (!enabled) {
+            disconnect()
+        } else if (Minecraft.getInstance().level != null) {
+            onWorldJoin()
+        }
     }
 
     fun registerMessageHandler(type: String, handler: (JsonObject) -> Unit) {
@@ -49,15 +64,20 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
         }
     }
 
-    fun send(message: JsonObject): Boolean = socket.send(message)
+    fun send(message: JsonObject): Boolean =
+        DragnevarConfig.values.teamSync.enabled && socket.send(message)
 
     fun sendPrefixMessage(message: String) {
         Chat.sendPrefixMessage(MESSAGE_PREFIX + message)
     }
 
     fun toggleConnection() {
-        if (isConnected || connectionState is TeamSyncConnectionState.Connecting) {
+        if (hasActiveConnection) {
             disconnect()
+            return
+        }
+        if (!DragnevarConfig.values.teamSync.enabled) {
+            sendPrefixMessage("&eEnable Team Sync first.")
             return
         }
 
@@ -84,6 +104,8 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
     }
 
     private fun receiveMessage(message: JsonObject) {
+        if (!DragnevarConfig.values.teamSync.enabled) return
+
         val type = message.get("type")?.asString ?: return
         when (type) {
             TeamMessages.JOINED -> receiveTeamMembers(message)

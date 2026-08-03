@@ -55,6 +55,12 @@ class ItemConfig {
 
 class TeamSyncConfig {
     @field:Expose
+    @field:ConfigOption(name = "Enabled", desc = "Enables shared Team Sync features.")
+    @field:ConfigEditorBoolean
+    @JvmField
+    var enabled = true
+
+    @field:Expose
     @field:Category(name = "Connection", desc = "Team Sync server connection.")
     @JvmField
     var connection = TeamSyncConnectionConfig()
