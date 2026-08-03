@@ -13,7 +13,7 @@ from websockets.asyncio.server import ServerConnection, serve
 
 MAX_MESSAGE_SIZE = 4_096
 MIN_PING_INTERVAL = 0.25
-TEAM_SYNC_VERSION = os.getenv("TEAM_SYNC_VERSION", "1.2.0")
+TEAM_SYNC_VERSION = os.getenv("TEAM_SYNC_VERSION", "1.3.0")
 
 
 @dataclass
