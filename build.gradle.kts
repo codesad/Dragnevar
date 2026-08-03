@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -60,7 +61,6 @@ dependencies {
 
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
     compileOnly("net.hypixel:mod-api:$hypixelModApiVersion")
-    runtimeOnly("maven.modrinth:1A2mKfBx:$hypixelModFabricVersion")
     include("maven.modrinth:1A2mKfBx:$hypixelModFabricVersion")
     shadowModImpl(project(":team-sync-protocol")) {
         isTransitive = false
@@ -68,9 +68,19 @@ dependencies {
     shadowModImpl("org.notenoughupdates.moulconfig:modern-$minecraftVersion:$moulConfigVersion")
 }
 
+tasks.jar {
+    archiveClassifier.set("dev")
+}
+
 tasks.shadowJar {
+    enabled = false
+}
+
+val releaseJar = tasks.register<ShadowJar>("releaseJar") {
+    dependsOn(tasks.jar)
     configurations = listOf(shadowModImpl)
     archiveClassifier.set("")
+    from(tasks.jar.flatMap { it.archiveFile }.map { zipTree(it) })
     exclude("moulconfig.accesswidener")
     filesMatching("META-INF/*.kotlin_module") {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -113,12 +123,8 @@ tasks.withType<KotlinCompile>().configureEach {
     compilerOptions.jvmTarget.set(JvmTarget.fromTarget(targetJavaVersion.toString()))
 }
 
-tasks.jar {
-    enabled = false
-}
-
 tasks.assemble {
-    dependsOn(tasks.shadowJar)
+    dependsOn(releaseJar)
 }
 
 publishing {
