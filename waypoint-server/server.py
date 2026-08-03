@@ -13,6 +13,7 @@ from websockets.asyncio.server import ServerConnection, serve
 
 MAX_MESSAGE_SIZE = 4_096
 MIN_PING_INTERVAL = 0.25
+TEAM_SYNC_VERSION = os.getenv("TEAM_SYNC_VERSION", "1.2.0")
 
 
 @dataclass
@@ -50,7 +51,15 @@ async def join(socket: ServerConnection, message: dict) -> Client | None:
     client = Client(socket, room, player_id, player_name)
     clients[socket] = client
     rooms[room].add(socket)
-    await socket.send(json.dumps({"type": "joined", "room": room}))
+    await socket.send(
+        json.dumps(
+            {
+                "type": "joined",
+                "room": room,
+                "version": TEAM_SYNC_VERSION,
+            }
+        )
+    )
     return client
 
 
@@ -143,7 +152,9 @@ async def main() -> None:
     host = os.getenv("WAYPOINT_HOST", "0.0.0.0")
     port = int(os.getenv("WAYPOINT_PORT", "8765"))
     async with serve(handler, host, port, max_size=MAX_MESSAGE_SIZE):
-        print(f"Waypoint server listening on ws://{host}:{port}")
+        print(
+            f"Team Sync server {TEAM_SYNC_VERSION} listening on ws://{host}:{port}"
+        )
         await asyncio.Future()
 
 

@@ -14,7 +14,8 @@ import java.util.concurrent.CompletionStage
 
 class WaypointSocket(
     private val onWaypoint: (Waypoint) -> Unit,
-    private val onStatus: (TeamSyncConnectionState) -> Unit
+    private val onStatus: (TeamSyncConnectionState) -> Unit,
+    private val onServerVersion: (String) -> Unit
 ) {
     private val httpClient = HttpClient.newHttpClient()
 
@@ -77,7 +78,10 @@ class WaypointSocket(
             .getOrNull() ?: return
 
         when (message.string("type")) {
-            "joined" -> onStatus(TeamSyncConnectionState.Connected)
+            "joined" -> {
+                onStatus(TeamSyncConnectionState.Connected)
+                message.get("version")?.asString?.let(onServerVersion)
+            }
             "error" -> onStatus(TeamSyncConnectionState.Error(message.string("message")))
             "ping" -> parseWaypoint(message)?.let(onWaypoint)
         }

@@ -2,6 +2,7 @@ package sh.stefan.dragnevar
 
 import net.fabricmc.api.ModInitializer
 import net.fabricmc.loader.api.FabricLoader
+import net.fabricmc.loader.api.Version
 import sh.stefan.dragnevar.config.DragnevarConfig
 import sh.stefan.dragnevar.feature.ClassDetector
 import sh.stefan.dragnevar.feature.ConfigCommand
@@ -16,6 +17,12 @@ class Dragnevar : ModInitializer {
     companion object {
         const val MOD_ID = "dragnevar"
         val LOGGER = Logger.getLogger(MOD_ID)
+        val VERSION: Version by lazy {
+            FabricLoader.getInstance()
+                .getModContainer(MOD_ID)
+                .orElseThrow()
+                .metadata.version
+        }
     }
 
     override fun onInitialize() {

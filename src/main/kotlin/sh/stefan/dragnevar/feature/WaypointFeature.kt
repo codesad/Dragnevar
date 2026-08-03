@@ -1,6 +1,7 @@
 package sh.stefan.dragnevar.feature
 
 import com.mojang.blaze3d.platform.InputConstants
+import net.fabricmc.loader.api.Version
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
@@ -39,7 +40,11 @@ object WaypointFeature :
     private const val LABEL_COLOR = 0xFFFFFFFF.toInt()
 
     private val waypoints = ConcurrentHashMap<String, Waypoint>()
-    private val socket = WaypointSocket(::receiveWaypoint, ::showStatus)
+    private val socket = WaypointSocket(
+        ::receiveWaypoint,
+        ::showStatus,
+        ::checkServerVersion
+    )
 
     @Volatile
     var connectionState: TeamSyncConnectionState = TeamSyncConnectionState.Disconnected
@@ -258,6 +263,27 @@ object WaypointFeature :
         client.execute {
             client.player?.let { player ->
                 Chat.showError(player, state.message)
+            }
+        }
+    }
+
+    private fun checkServerVersion(serverVersion: String) {
+        val requiredVersion = runCatching { Version.parse(serverVersion) }
+            .getOrElse {
+                logger.warning("Team Sync returned an invalid version: $serverVersion")
+                return
+            }
+        if (Dragnevar.VERSION >= requiredVersion) return
+
+        val client = Minecraft.getInstance()
+        client.execute {
+            client.player?.let { player ->
+                Chat.showError(
+                    player,
+                    "Dragnevar ${Dragnevar.VERSION.friendlyString} is outdated for Team Sync. " +
+                        "Some features may be broken or missing. " +
+                        "Update to $serverVersion or newer."
+                )
             }
         }
     }
