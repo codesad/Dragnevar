@@ -6,12 +6,16 @@ import net.minecraft.client.Minecraft
 import sh.stefan.dragnevar.Dragnevar
 import sh.stefan.dragnevar.config.DragnevarConfig
 import sh.stefan.dragnevar.teamsync.TeamSyncConnectionState
+import sh.stefan.dragnevar.teamsync.TeamMember
 import sh.stefan.dragnevar.teamsync.TeamSyncSocket
+import sh.stefan.dragnevar.teamsync.protocol.TeamMessages
 import sh.stefan.dragnevar.utils.Chat
 import java.util.concurrent.ConcurrentHashMap
 
 object TeamSyncFeature : Feature(), WorldConnectionFeature {
+    private const val MESSAGE_PREFIX = "&b[TS] &r"
     private val messageHandlers = ConcurrentHashMap<String, (JsonObject) -> Unit>()
+    private val teamMembers = ConcurrentHashMap<String, TeamMember>()
     private val socket = TeamSyncSocket(
         ::receiveMessage,
         ::showStatus,
@@ -24,6 +28,9 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
 
     val isConnected: Boolean
         get() = socket.isConnected
+
+    val members: List<TeamMember>
+        get() = teamMembers.values.sortedBy(TeamMember::playerName)
 
     override fun onWorldJoin() {
         val config = DragnevarConfig.values.teamSync.connection
@@ -43,6 +50,10 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
     }
 
     fun send(message: JsonObject): Boolean = socket.send(message)
+
+    fun sendPrefixMessage(message: String) {
+        Chat.sendPrefixMessage(MESSAGE_PREFIX + message)
+    }
 
     fun toggleConnection() {
         if (isConnected || connectionState is TeamSyncConnectionState.Connecting) {
@@ -69,23 +80,51 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
 
     private fun disconnect() {
         socket.disconnect()
+        teamMembers.clear()
     }
 
     private fun receiveMessage(message: JsonObject) {
         val type = message.get("type")?.asString ?: return
-        messageHandlers[type]?.invoke(message)
+        when (type) {
+            TeamMessages.JOINED -> receiveTeamMembers(message)
+            TeamMessages.MEMBER_JOINED -> TeamMessages.member(message)?.let { member ->
+                teamMembers[member.playerId] = member
+                showTeamMessage("&a${member.playerName} joined.")
+            }
+            TeamMessages.MEMBER_LEFT -> {
+                message.get("playerId")?.asString
+                    ?.let(teamMembers::remove)
+                    ?.let { member ->
+                        showTeamMessage("&c${member.playerName} left.")
+                    }
+            }
+            else -> messageHandlers[type]?.invoke(message)
+        }
+    }
+
+    private fun receiveTeamMembers(message: JsonObject) {
+        val existingMembers = TeamMessages.members(message)
+            .sortedBy(TeamMember::playerName)
+        teamMembers.clear()
+        existingMembers.associateByTo(teamMembers, TeamMember::playerId)
+
+        val text = if (existingMembers.isEmpty()) {
+            "&7No teammates are connected yet."
+        } else {
+            "&fAlready connected: &a${existingMembers.joinToString { it.playerName }}"
+        }
+        showTeamMessage(text)
+    }
+
+    private fun showTeamMessage(message: String) {
+        sendPrefixMessage(message)
     }
 
     private fun showStatus(state: TeamSyncConnectionState) {
         connectionState = state
         if (state !is TeamSyncConnectionState.Error) return
 
-        val client = Minecraft.getInstance()
-        client.execute {
-            client.player?.let { player ->
-                Chat.showError(player, state.message)
-            }
-        }
+        sendPrefixMessage("&c${state.message}")
     }
 
     private fun checkServerVersion(serverVersion: String) {
@@ -96,27 +135,16 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature {
             }
         if (Dragnevar.VERSION >= requiredVersion) return
 
-        val client = Minecraft.getInstance()
-        client.execute {
-            client.player?.let { player ->
-                Chat.showError(
-                    player,
-                    "Dragnevar ${Dragnevar.VERSION.friendlyString} is outdated for Team Sync. " +
-                        "Some features may be broken or missing. " +
-                        "Update to $serverVersion or newer."
-                )
-            }
-        }
+        sendPrefixMessage(
+            "&eDragnevar ${Dragnevar.VERSION.friendlyString} is outdated for Team Sync. " +
+                "Some features may be broken or missing. " +
+                "Update to $serverVersion or newer."
+        )
     }
 
     private fun showConnectionError(error: Throwable) {
         val message = error.message ?: "Could not connect."
         connectionState = TeamSyncConnectionState.Error(message)
-        val client = Minecraft.getInstance()
-        client.execute {
-            client.player?.let { player ->
-                Chat.showError(player, message)
-            }
-        }
+        sendPrefixMessage("&c$message")
     }
 }

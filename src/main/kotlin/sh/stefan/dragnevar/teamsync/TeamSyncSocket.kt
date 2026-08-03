@@ -64,6 +64,7 @@ class TeamSyncSocket(
             "joined" -> {
                 onStatus(TeamSyncConnectionState.Connected)
                 message.get("version")?.asString?.let(onServerVersion)
+                onMessage(message)
             }
             "error" -> onStatus(TeamSyncConnectionState.Error(message.string("message")))
             else -> onMessage(message)

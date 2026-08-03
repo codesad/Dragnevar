@@ -17,7 +17,6 @@ import net.minecraft.world.phys.Vec3
 import sh.stefan.dragnevar.Dragnevar
 import sh.stefan.dragnevar.config.DragnevarConfig
 import sh.stefan.dragnevar.teamsync.protocol.WaypointMessages
-import sh.stefan.dragnevar.utils.Chat
 import sh.stefan.dragnevar.utils.Gui
 import sh.stefan.dragnevar.utils.Keybinds
 import sh.stefan.dragnevar.utils.Render
@@ -105,13 +104,13 @@ object WaypointFeature :
         itemName: Component?
     ) {
         if (!TeamSyncFeature.isConnected) {
-            Chat.showError(player, "Open /rgconfig and connect first.")
+            TeamSyncFeature.sendPrefixMessage("&eOpen /rgconfig and connect first.")
             return
         }
 
         val hit = player.pick(RAYCAST_DISTANCE, 1.0f, false)
         if (hit.type != HitResult.Type.BLOCK || hit !is BlockHitResult) {
-            Chat.showError(player, "You aren't looking at a block.")
+            TeamSyncFeature.sendPrefixMessage("&cYou aren't looking at a block.")
             return
         }
 
@@ -119,7 +118,7 @@ object WaypointFeature :
         val dimension = level.dimension().identifier().toString()
         val message = WaypointMessages.createPing(position, dimension, itemName)
         if (!TeamSyncFeature.send(message)) {
-            Chat.showError(player, "The Team Sync connection isn't ready.")
+            TeamSyncFeature.sendPrefixMessage("&cThe connection isn't ready.")
             return
         }
 

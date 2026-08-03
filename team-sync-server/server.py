@@ -33,6 +33,22 @@ async def send_error(socket: ServerConnection, message: str) -> None:
     await socket.send(json.dumps({"type": "error", "message": message}))
 
 
+async def send_to_team(
+    team_code: str,
+    message: dict,
+    excluded_socket: ServerConnection | None = None,
+) -> None:
+    recipients = [
+        socket for socket in teams[team_code] if socket is not excluded_socket
+    ]
+    if recipients:
+        payload = json.dumps(message)
+        await asyncio.gather(
+            *(socket.send(payload) for socket in recipients),
+            return_exceptions=True,
+        )
+
+
 async def join_team(socket: ServerConnection, message: dict) -> Client | None:
     team_code = str(message.get("teamCode", message.get("room", ""))).strip()
     player_id = str(message.get("playerId", "")).strip()
@@ -48,6 +64,7 @@ async def join_team(socket: ServerConnection, message: dict) -> Client | None:
         await send_error(socket, "Invalid player name")
         return None
 
+    existing_members = [clients[member] for member in teams[team_code]]
     client = Client(socket, team_code, player_id, player_name)
     clients[socket] = client
     teams[team_code].add(socket)
@@ -57,8 +74,24 @@ async def join_team(socket: ServerConnection, message: dict) -> Client | None:
                 "type": "joined",
                 "teamCode": team_code,
                 "version": TEAM_SYNC_VERSION,
+                "members": [
+                    {
+                        "playerId": member.player_id,
+                        "playerName": member.player_name,
+                    }
+                    for member in existing_members
+                ],
             }
         )
+    )
+    await send_to_team(
+        team_code,
+        {
+            "type": "member_joined",
+            "playerId": player_id,
+            "playerName": player_name,
+        },
+        excluded_socket=socket,
     )
     return client
 
@@ -91,7 +124,8 @@ async def relay_ping(client: Client, message: dict) -> None:
         await send_error(client.socket, "Invalid dimension")
         return
 
-    payload = json.dumps(
+    await send_to_team(
+        client.team_code,
         {
             "type": "ping",
             "senderId": client.player_id,
@@ -101,16 +135,9 @@ async def relay_ping(client: Client, message: dict) -> None:
             "y": y,
             "z": z,
             **({"itemName": message["itemName"]} if "itemName" in message else {}),
-        }
+        },
+        excluded_socket=client.socket,
     )
-    teammates = [
-        socket for socket in teams[client.team_code] if socket is not client.socket
-    ]
-    if teammates:
-        await asyncio.gather(
-            *(socket.send(payload) for socket in teammates),
-            return_exceptions=True,
-        )
 
 
 async def handler(socket: ServerConnection) -> None:
@@ -146,6 +173,13 @@ async def handler(socket: ServerConnection) -> None:
         if client is not None:
             team = teams[client.team_code]
             team.discard(socket)
+            await send_to_team(
+                client.team_code,
+                {
+                    "type": "member_left",
+                    "playerId": client.player_id,
+                },
+            )
             if not team:
                 teams.pop(client.team_code, None)
 
