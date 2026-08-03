@@ -1,6 +1,7 @@
 package sh.stefan.dragnevar.teamsync
 
 import net.minecraft.client.Minecraft
+import sh.stefan.dragnevar.mixin.MinecraftAccessor
 import sh.stefan.dragnevar.teamsync.protocol.AuthChallenge
 import sh.stefan.dragnevar.teamsync.protocol.AuthenticateRequest
 import sh.stefan.dragnevar.teamsync.protocol.TeamSyncSecurity
@@ -16,7 +17,8 @@ object MinecraftIdentity {
         val minecraft = Minecraft.getInstance()
         val user = minecraft.user
         val playerId = user.profileId
-        return minecraft.profileKeyPairManager.prepareKeyPair().thenApply { optionalPair ->
+        val keyPairManager = (minecraft as MinecraftAccessor).`dragnevar$getProfileKeyPairManager`()
+        return keyPairManager.prepareKeyPair().thenApply { optionalPair ->
             val pair = optionalPair.orElseThrow {
                 IllegalStateException("Profile key unavailable")
             }
