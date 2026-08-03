@@ -61,6 +61,7 @@ dependencies {
 
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
     compileOnly("net.hypixel:mod-api:$hypixelModApiVersion")
+    runtimeOnly("maven.modrinth:1A2mKfBx:$hypixelModFabricVersion")
     include("maven.modrinth:1A2mKfBx:$hypixelModFabricVersion")
     shadowModImpl(project(":team-sync-protocol")) {
         isTransitive = false
