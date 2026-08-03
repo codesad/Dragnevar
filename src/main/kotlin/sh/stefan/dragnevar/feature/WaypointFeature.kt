@@ -30,7 +30,8 @@ object WaypointFeature :
     Feature(),
     TickFeature,
     KeybindFeature,
-    HudRenderFeature {
+    HudRenderFeature,
+    WorldConnectionFeature {
     private const val RAYCAST_DISTANCE = 128.0
     private const val ICON_BACKGROUND_COLOR = 0xC0000000.toInt()
     private const val LABEL_BACKGROUND_COLOR = 0x90000000.toInt()
@@ -90,7 +91,33 @@ object WaypointFeature :
             }
     }
 
-    fun connect(url: String, room: String): Result<Unit> = runCatching {
+    override fun onWorldJoin() {
+        val config = DragnevarConfig.values.waypoints
+        if (config.websocketUrl.isBlank() || config.teamName.isBlank()) return
+
+        connectConfigured().onFailure(::showConnectionError)
+    }
+
+    override fun onWorldLeave() {
+        disconnect()
+    }
+
+    fun toggleConnection() {
+        if (isConnected) {
+            disconnect()
+            return
+        }
+
+        DragnevarConfig.save()
+        connectConfigured().onFailure(::showConnectionError)
+    }
+
+    private fun connectConfigured(): Result<Unit> {
+        val config = DragnevarConfig.values.waypoints
+        return connect(config.websocketUrl, config.teamName)
+    }
+
+    private fun connect(url: String, room: String): Result<Unit> = runCatching {
         require(url.isNotBlank()) { "WebSocket URL cannot be empty." }
         require(room.isNotBlank()) { "Team name cannot be empty." }
         val player = Minecraft.getInstance().player
@@ -145,7 +172,7 @@ object WaypointFeature :
     }
 
     private fun playPingSound(player: LocalPlayer) {
-        if (!DragnevarConfig.values.playPingSound) return
+        if (!DragnevarConfig.values.waypoints.playPingSound) return
         player.playSound(SoundEvents.NOTE_BLOCK_PLING.value(), 0.7f, 3.5f)
     }
 
@@ -162,7 +189,8 @@ object WaypointFeature :
             dimension,
             position,
             itemName,
-            System.currentTimeMillis() + DragnevarConfig.values.waypointTimeoutSeconds * 1_000L
+            System.currentTimeMillis() +
+                DragnevarConfig.values.waypoints.waypointTimeoutSeconds * 1_000L
         )
     }
 
@@ -180,7 +208,7 @@ object WaypointFeature :
         val client = Minecraft.getInstance()
         val playerLabel = Component.literal(waypoint.senderName)
             .withColor(playerColor and 0xFFFFFF)
-        if (DragnevarConfig.values.showWaypointDistance) {
+        if (DragnevarConfig.values.waypoints.showWaypointDistance) {
             val distance = cameraPosition
                 .distanceTo(Vec3.atCenterOf(waypoint.position))
                 .roundToInt()
@@ -221,6 +249,15 @@ object WaypointFeature :
         val client = Minecraft.getInstance()
         client.execute {
             client.player?.sendSystemMessage(Component.literal(message))
+        }
+    }
+
+    private fun showConnectionError(error: Throwable) {
+        val client = Minecraft.getInstance()
+        client.execute {
+            client.player?.let { player ->
+                Chat.showError(player, error.message ?: "Could not connect.")
+            }
         }
     }
 }

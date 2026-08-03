@@ -17,11 +17,11 @@
   "mixins": [
     "dragnevar.mixins.json"
   ],
+  "accessWidener": "dragnevar.accesswidener",
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric-language-kotlin": ">=${kotlin_loader_version}",
     "fabric-api": "*",
-    "yet_another_config_lib_v3": ">=3.9.6",
     "minecraft": "${minecraft_version}"
   }
 }

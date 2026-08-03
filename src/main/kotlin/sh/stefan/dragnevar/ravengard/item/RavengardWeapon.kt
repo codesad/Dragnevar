@@ -37,7 +37,7 @@ class RavengardWeapon private constructor(
         }
 
         override fun compare(first: RavengardWeapon, second: RavengardWeapon): Int {
-            return when (DragnevarConfig.values.weaponPriority) {
+            return when (DragnevarConfig.values.items.weaponPriority) {
                 WeaponPriority.DPS -> compareValuesBy(
                     first,
                     second,

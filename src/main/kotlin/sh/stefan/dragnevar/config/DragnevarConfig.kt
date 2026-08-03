@@ -1,259 +1,132 @@
 package sh.stefan.dragnevar.config
 
-import dev.isxander.yacl3.api.ButtonOption
-import dev.isxander.yacl3.api.ConfigCategory
-import dev.isxander.yacl3.api.LabelOption
-import dev.isxander.yacl3.api.Option
-import dev.isxander.yacl3.api.OptionDescription
-import dev.isxander.yacl3.api.OptionGroup
-import dev.isxander.yacl3.api.StateManager
-import dev.isxander.yacl3.api.YetAnotherConfigLib
-import dev.isxander.yacl3.api.controller.EnumControllerBuilder
-import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
-import dev.isxander.yacl3.api.controller.StringControllerBuilder
-import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
-import dev.isxander.yacl3.config.v2.api.ConfigClassHandler
-import dev.isxander.yacl3.config.v2.api.SerialEntry
-import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+import com.google.gson.annotations.Expose
+import io.github.notenoughupdates.moulconfig.Config
+import io.github.notenoughupdates.moulconfig.annotations.Category
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorBoolean
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDropdown
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorSlider
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorText
+import io.github.notenoughupdates.moulconfig.annotations.ConfigOption
+import io.github.notenoughupdates.moulconfig.common.text.StructuredText
+import io.github.notenoughupdates.moulconfig.managed.ManagedConfig
 import net.fabricmc.loader.api.FabricLoader
-import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.screens.Screen
-import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
 import sh.stefan.dragnevar.Dragnevar
-import sh.stefan.dragnevar.feature.WaypointFeature
-import sh.stefan.dragnevar.utils.Chat
+import java.io.File
+import java.util.function.BiConsumer
+import java.util.logging.Level
 
-class DragnevarConfigData {
-    @field:SerialEntry
+class DragnevarConfigData : Config() {
+    @field:Expose
+    @field:Category(name = "Items", desc = "Item highlighting and behavior.")
+    @JvmField
+    var items = ItemConfig()
+
+    @field:Expose
+    @field:Category(name = "Waypoints", desc = "Shared waypoint pings.")
+    @JvmField
+    var waypoints = WaypointConfig()
+
+    override fun getTitle(): StructuredText = StructuredText.of("Dragnevar")
+}
+
+class ItemConfig {
+    @field:Expose
+    @field:ConfigOption(
+        name = "Weapon Priority",
+        desc = "DPS uses damage multiplied by attack speed. Damage prioritizes raw damage, using attack speed only to break ties."
+    )
+    @field:ConfigEditorDropdown
+    @JvmField
     var weaponPriority = WeaponPriority.DPS
 
-    @field:SerialEntry
+    @field:Expose
+    @field:ConfigOption(
+        name = "Prevent Item Drop",
+        desc = "Prevents your client from dropping the held item when using an ability, avoiding the misleading visual cooldown reset."
+    )
+    @field:ConfigEditorBoolean
+    @JvmField
     var preventRavengardItemDrop = true
+}
 
-    @field:SerialEntry
+class WaypointConfig {
+    @field:Expose
+    @field:ConfigOption(name = "WebSocket URL", desc = "Address of the waypoint relay server.")
+    @field:ConfigEditorText
+    @JvmField
     var websocketUrl = ""
 
-    @field:SerialEntry
+    @field:Expose
+    @field:ConfigOption(name = "Team Name", desc = "Players using the same team name share pings.")
+    @field:ConfigEditorText
+    @JvmField
     var teamName = ""
 
-    @field:SerialEntry
+    @field:ConfigOption(name = "Status", desc = "Current waypoint server connection.")
+    @field:WaypointConnectionStatus
+    @Transient
+    @JvmField
+    var connectionStatus = Unit
+
+    @field:ConfigOption(name = "Connection", desc = "Connects to or disconnects from the waypoint server.")
+    @field:WaypointConnectionButton
+    @Transient
+    @JvmField
+    var connectionAction = Unit
+
+    @field:Expose
+    @field:ConfigOption(name = "Waypoint Duration", desc = "How long waypoint markers remain visible, in seconds.")
+    @field:ConfigEditorSlider(minValue = 5f, maxValue = 120f, minStep = 5f)
+    @JvmField
     var waypointTimeoutSeconds = 30
 
-    @field:SerialEntry
+    @field:Expose
+    @field:ConfigOption(name = "Ping Sound", desc = "Plays a sound when a waypoint is received.")
+    @field:ConfigEditorBoolean
+    @JvmField
     var playPingSound = true
 
-    @field:SerialEntry
+    @field:Expose
+    @field:ConfigOption(name = "Show Distance", desc = "Shows the distance next to each waypoint.")
+    @field:ConfigEditorBoolean
+    @JvmField
     var showWaypointDistance = true
 }
 
 object DragnevarConfig {
-    private val handler = ConfigClassHandler.createBuilder(DragnevarConfigData::class.java)
-        .id(Identifier.fromNamespaceAndPath(Dragnevar.MOD_ID, "config"))
-        .serializer { config ->
-            GsonConfigSerializerBuilder.create(config)
-                .setPath(FabricLoader.getInstance().configDir.resolve("dragnevar.json5"))
-                .setJson5(true)
-                .build()
-        }
-        .build()
+    private val configFile: File
+        get() = FabricLoader.getInstance().configDir.resolve("dragnevar.json").toFile()
+
+    private lateinit var managed: ManagedConfig<DragnevarConfigData>
 
     val values: DragnevarConfigData
-        get() = handler.instance()
+        get() = managed.instance
 
     fun load() {
-        handler.load()
-    }
+        if (::managed.isInitialized) return
 
-    fun createScreen(parent: Screen?): Screen {
-        val config = values
-        val defaults = handler.defaults()
-        val connected = WaypointFeature.isConnected
-        val weaponPriorityOption = Option.createBuilder<WeaponPriority>()
-            .name(Component.translatable("dragnevar.config.weapon_priority"))
-            .description(
-                OptionDescription.of(
-                    Component.translatable("dragnevar.config.weapon_priority.description")
-                )
-            )
-            .binding(
-                defaults.weaponPriority,
-                { config.weaponPriority },
-                { config.weaponPriority = it }
-            )
-            .controller { option ->
-                EnumControllerBuilder.create(option)
-                    .enumClass(WeaponPriority::class.java)
-                    .formatValue { priority ->
-                        Component.translatable(
-                            "dragnevar.config.weapon_priority.${priority.name.lowercase()}"
-                        )
-                    }
+        managed = ManagedConfig.create(configFile, DragnevarConfigData::class.java) {
+            customProcessor(WaypointConnectionStatus::class.java) { option, _ ->
+                WaypointConnectionStatusEditor(option)
             }
-            .build()
-        val preventDropOption = Option.createBuilder<Boolean>()
-            .name(Component.translatable("dragnevar.config.prevent_item_drop"))
-            .description(
-                OptionDescription.of(
-                    Component.translatable("dragnevar.config.prevent_item_drop.description")
-                )
-            )
-            .binding(
-                defaults.preventRavengardItemDrop,
-                { config.preventRavengardItemDrop },
-                { config.preventRavengardItemDrop = it }
-            )
-            .controller(TickBoxControllerBuilder::create)
-            .build()
-        val urlOption = Option.createBuilder<String>()
-            .name(Component.translatable("dragnevar.config.websocket_url"))
-            .description(
-                OptionDescription.of(
-                    Component.translatable("dragnevar.config.websocket_url.description")
-                )
-            )
-            .binding(defaults.websocketUrl, { config.websocketUrl }, { config.websocketUrl = it })
-            .controller(StringControllerBuilder::create)
-            .build()
-        val teamOption = Option.createBuilder<String>()
-            .name(Component.translatable("dragnevar.config.team_name"))
-            .description(
-                OptionDescription.of(
-                    Component.translatable("dragnevar.config.team_name.description")
-                )
-            )
-            .binding(defaults.teamName, { config.teamName }, { config.teamName = it })
-            .controller(StringControllerBuilder::create)
-            .build()
-        val status = LabelOption.createBuilder()
-            .state(
-                StateManager.createSimple(
-                    connectionStatus(),
-                    ::connectionStatus
-                ) { }
-            )
-            .build()
-        val connectButton = ButtonOption.createBuilder()
-            .name(Component.translatable("dragnevar.config.server"))
-            .text(Component.translatable("dragnevar.config.connect.button"))
-            .available(!connected)
-            .action { _, _ ->
-                config.websocketUrl = urlOption.pendingValue()
-                config.teamName = teamOption.pendingValue()
-                handler.save()
-                WaypointFeature.connect(config.websocketUrl, config.teamName)
-                    .onFailure { error ->
-                        val player = Minecraft.getInstance().player
-                        if (player != null) {
-                            Chat.showError(player, error.message ?: "Could not connect.")
-                        }
-                    }
+            customProcessor(WaypointConnectionButton::class.java) { option, _ ->
+                WaypointConnectionButtonEditor(option)
             }
-            .build()
-        val disconnectButton = ButtonOption.createBuilder()
-            .name(Component.translatable("dragnevar.config.server"))
-            .text(Component.translatable("dragnevar.config.disconnect.button"))
-            .available(connected)
-            .action { _, _ -> WaypointFeature.disconnect() }
-            .build()
-        val timeoutOption = Option.createBuilder<Int>()
-            .name(Component.translatable("dragnevar.config.timeout"))
-            .description(
-                OptionDescription.of(
-                    Component.translatable("dragnevar.config.timeout.description")
-                )
-            )
-            .binding(
-                defaults.waypointTimeoutSeconds,
-                { config.waypointTimeoutSeconds },
-                { config.waypointTimeoutSeconds = it }
-            )
-            .controller {
-                IntegerSliderControllerBuilder.create(it)
-                    .range(5, 120)
-                    .step(5)
+            loadFailed = BiConsumer { _, error ->
+                Dragnevar.LOGGER.log(Level.WARNING, "Could not load the config.", error)
             }
-            .build()
-        val soundOption = Option.createBuilder<Boolean>()
-            .name(Component.translatable("dragnevar.config.ping_sound"))
-            .binding(
-                defaults.playPingSound,
-                { config.playPingSound },
-                { config.playPingSound = it }
-            )
-            .controller(TickBoxControllerBuilder::create)
-            .build()
-        val distanceOption = Option.createBuilder<Boolean>()
-            .name(Component.translatable("dragnevar.config.show_distance"))
-            .binding(
-                defaults.showWaypointDistance,
-                { config.showWaypointDistance },
-                { config.showWaypointDistance = it }
-            )
-            .controller(TickBoxControllerBuilder::create)
-            .build()
-
-        return YetAnotherConfigLib.createBuilder()
-            .title(Component.literal("Dragnevar"))
-            .category(
-                ConfigCategory.createBuilder()
-                    .name(Component.translatable("dragnevar.config.items"))
-                    .group(
-                        OptionGroup.createBuilder()
-                            .name(Component.translatable("dragnevar.config.item_highlighting"))
-                            .option(weaponPriorityOption)
-                            .build()
-                    )
-                    .group(
-                        OptionGroup.createBuilder()
-                            .name(Component.translatable("dragnevar.config.item_behavior"))
-                            .option(preventDropOption)
-                            .build()
-                    )
-                    .build()
-            )
-            .category(
-                ConfigCategory.createBuilder()
-                    .name(Component.translatable("dragnevar.config.waypoints"))
-                    .group(
-                        OptionGroup.createBuilder()
-                            .name(Component.translatable("dragnevar.config.connection"))
-                            .option(urlOption)
-                            .option(teamOption)
-                            .option(status)
-                            .option(connectButton)
-                            .option(disconnectButton)
-                            .build()
-                    )
-                    .group(
-                        OptionGroup.createBuilder()
-                            .name(Component.translatable("dragnevar.config.behavior"))
-                            .option(timeoutOption)
-                            .option(soundOption)
-                            .option(distanceOption)
-                            .build()
-                    )
-                    .build()
-            )
-            .save(handler::save)
-            .screenInit { screen ->
-                ScreenEvents.afterTick(screen).register {
-                    status.stateManager().sync()
-                    val isConnected = WaypointFeature.isConnected
-                    connectButton.setAvailable(!isConnected)
-                    disconnectButton.setAvailable(isConnected)
-                }
+            saveFailed = BiConsumer { _, error ->
+                Dragnevar.LOGGER.log(Level.WARNING, "Could not save the config.", error)
             }
-            .build()
-            .generateScreen(parent)
-    }
-
-    private fun connectionStatus(): Component = Component.translatable(
-        if (WaypointFeature.isConnected) {
-            "dragnevar.config.status.connected"
-        } else {
-            "dragnevar.config.status.disconnected"
         }
-    )
+    }
+
+    fun openScreen() {
+        managed.openConfigGui()
+    }
+
+    fun save() {
+        managed.saveToFile()
+    }
 }

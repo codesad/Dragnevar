@@ -53,7 +53,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         if (!menu.carried.isEmpty) return
 
         val profile = ClassDetector.currentProfile
-        val weaponPriority = DragnevarConfig.values.weaponPriority
+        val weaponPriority = DragnevarConfig.values.items.weaponPriority
         val currentPlayer = player
         if (currentPlayer == null) {
             menuState = null

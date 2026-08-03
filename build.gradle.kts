@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "2.4.10"
     id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
+    id("com.gradleup.shadow") version "9.6.1"
     id("maven-publish")
 }
 
@@ -14,7 +15,12 @@ val minecraftVersion = providers.gradleProperty("minecraft_version").get()
 val loaderVersion = providers.gradleProperty("loader_version").get()
 val kotlinLoaderVersion = providers.gradleProperty("kotlin_loader_version").get()
 val fabricVersion = providers.gradleProperty("fabric_version").get()
-val yaclVersion = providers.gradleProperty("yacl_version").get()
+val moulConfigVersion = providers.gradleProperty("moulconfig_version").get()
+
+val shadowModImpl = configurations.create("shadowModImpl")
+configurations.named("implementation") {
+    extendsFrom(shadowModImpl)
+}
 
 version = "$modVersion+$minecraftVersion"
 group = mavenGroup
@@ -33,11 +39,8 @@ java {
 }
 
 repositories {
-    maven("https://api.modrinth.com/maven") {
-        name = "Modrinth"
-        content {
-            includeGroup("maven.modrinth")
-        }
+    maven("https://maven.notenoughupdates.org/releases/") {
+        name = "NotEnoughUpdates"
     }
 }
 
@@ -48,7 +51,27 @@ dependencies {
     implementation("net.fabricmc:fabric-language-kotlin:$kotlinLoaderVersion")
 
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
-    implementation("maven.modrinth:yacl:$yaclVersion")
+    shadowModImpl("org.notenoughupdates.moulconfig:modern-$minecraftVersion:$moulConfigVersion")
+}
+
+tasks.shadowJar {
+    configurations = listOf(shadowModImpl)
+    archiveClassifier.set("")
+    exclude("moulconfig.accesswidener")
+    filesMatching("META-INF/*.kotlin_module") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    filesMatching("META-INF/services/**") {
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    }
+    relocate(
+        "io.github.notenoughupdates.moulconfig",
+        "sh.stefan.dragnevar.deps.moulconfig"
+    )
+    mergeServiceFiles()
+    from("LICENSE.txt") {
+        rename { "${it}_$archivesBaseName" }
+    }
 }
 
 tasks.processResources {
@@ -81,9 +104,11 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 tasks.jar {
-    from("LICENSE.txt") {
-        rename { "${it}_$archivesBaseName" }
-    }
+    enabled = false
+}
+
+tasks.assemble {
+    dependsOn(tasks.shadowJar)
 }
 
 // configure the maven publication

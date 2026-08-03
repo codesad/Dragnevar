@@ -10,7 +10,7 @@ object ConfigCommand : Feature(), CommandFeature {
         dispatcher.register(
             ClientCommands.literal("rgconfig").executes { context ->
                 context.source.client.execute {
-                    context.source.client.gui.setScreen(DragnevarConfig.createScreen(null))
+                    DragnevarConfig.openScreen()
                 }
                 1
             }

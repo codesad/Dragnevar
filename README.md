@@ -18,7 +18,6 @@ open the ravengard main menu once after joining so the mod can detect your class
 
 install:
 
-- yet another config lib
 - fabric language kotlin
 - fabric api
 

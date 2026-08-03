@@ -19,7 +19,7 @@ public abstract class MixinLocalPlayer {
             )
     )
     private ItemStack dragnevar$keepSelectedItem(Inventory inventory, boolean dropAll) {
-        if (DragnevarConfig.INSTANCE.getValues().getPreventRavengardItemDrop()
+        if (DragnevarConfig.INSTANCE.getValues().items.preventRavengardItemDrop
                 && RavengardDetector.isOnRavengard()) {
             return inventory.getSelectedItem();
         }

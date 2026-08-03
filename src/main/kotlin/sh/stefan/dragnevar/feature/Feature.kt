@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
@@ -49,6 +50,12 @@ interface HudRenderFeature {
     fun renderHud(graphics: GuiGraphicsExtractor, deltaTracker: DeltaTracker)
 }
 
+interface WorldConnectionFeature {
+    fun onWorldJoin()
+
+    fun onWorldLeave() {}
+}
+
 object FeatureManager {
     // screens can get initialized again, so don't register another callback for the same one
     private val initializedContainerScreens = Collections.newSetFromMap(
@@ -65,6 +72,7 @@ object FeatureManager {
         val commandFeatures = features.filterIsInstance<CommandFeature>()
         val keybindFeatures = features.filterIsInstance<KeybindFeature>()
         val hudRenderFeatures = features.filterIsInstance<HudRenderFeature>()
+        val worldConnectionFeatures = features.filterIsInstance<WorldConnectionFeature>()
 
         keybindFeatures.forEach {
             KeyMappingHelper.registerKeyMapping(it.keyMapping)
@@ -87,6 +95,14 @@ object FeatureManager {
 
         ClientCommandRegistrationCallback.EVENT.register { dispatcher, _ ->
             commandFeatures.forEach { it.registerCommands(dispatcher) }
+        }
+
+        ClientPlayConnectionEvents.JOIN.register { _, _, _ ->
+            worldConnectionFeatures.forEach(WorldConnectionFeature::onWorldJoin)
+        }
+
+        ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
+            worldConnectionFeatures.forEach(WorldConnectionFeature::onWorldLeave)
         }
 
         ScreenEvents.AFTER_INIT.register { _, screen, _, _ ->
