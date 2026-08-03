@@ -10,8 +10,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import sh.stefan.dragnevar.teamsync.protocol.AuthChallenge
 import sh.stefan.dragnevar.teamsync.protocol.AuthenticateRequest
@@ -30,11 +32,15 @@ import sh.stefan.dragnevar.teamsync.protocol.WaypointPingRequest
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.ArrayDeque
 import java.util.Base64
 import java.util.UUID
 import kotlin.math.abs
 
 private const val CHALLENGE_LIFETIME_MILLIS = 15_000L
+private const val MAX_PENDING_AUTHENTICATIONS = 64
+private const val MAX_AUTHENTICATIONS_PER_SECOND = 32
+private const val MAX_CONCURRENT_AUTHENTICATIONS = 8
 private const val MAX_PARTY_MEMBERS = 128
 private const val MIN_PING_INTERVAL_NANOS = 250_000_000L
 private const val MAX_COORDINATE = 30_000_000
@@ -45,19 +51,31 @@ class TeamSyncServer(
 ) {
     private val random = SecureRandom()
     private val stateMutex = Mutex()
+    private val authenticationRateMutex = Mutex()
+    private val pendingAuthentications = Semaphore(MAX_PENDING_AUTHENTICATIONS)
+    private val authenticationChecks = Semaphore(MAX_CONCURRENT_AUTHENTICATIONS)
+    private val authenticationAttempts = ArrayDeque<Long>()
     private val rooms = mutableMapOf<String, MutableSet<Client>>()
     private val clientsByPlayerId = mutableMapOf<UUID, Client>()
 
     suspend fun handle(session: DefaultWebSocketServerSession) {
-        val challenge = createChallenge()
-        var client: Client? = null
-        session.sendMessage(challenge)
-        val authenticationTimeout = session.launch {
-            delay(CHALLENGE_LIFETIME_MILLIS)
-            session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Auth timeout"))
+        if (!pendingAuthentications.tryAcquire()) {
+            session.close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Server busy"))
+            return
         }
 
+        var waitingForAuthentication = true
+        val challenge = createChallenge()
+        var client: Client? = null
+        var authenticationTimeout: Job? = null
+
         try {
+            session.sendMessage(challenge)
+            authenticationTimeout = session.launch {
+                delay(CHALLENGE_LIFETIME_MILLIS)
+                session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Auth timeout"))
+            }
+
             for (frame in session.incoming) {
                 if (frame !is Frame.Text) {
                     session.sendMessage(ErrorMessage("Text messages only"))
@@ -78,6 +96,8 @@ class TeamSyncServer(
                     }
                     client = authenticate(session, challenge, message) ?: return
                     authenticationTimeout.cancel()
+                    waitingForAuthentication = false
+                    pendingAuthentications.release()
                     continue
                 }
 
@@ -88,7 +108,8 @@ class TeamSyncServer(
                 }
             }
         } finally {
-            authenticationTimeout.cancel()
+            authenticationTimeout?.cancel()
+            if (waitingForAuthentication) pendingAuthentications.release()
             client?.let { leave(it) }
         }
     }
@@ -98,12 +119,19 @@ class TeamSyncServer(
         challenge: AuthChallenge,
         request: AuthenticateRequest
     ): Client? {
+        if (!allowAuthentication() || !authenticationChecks.tryAcquire()) {
+            session.close(CloseReason(CloseReason.Codes.TRY_AGAIN_LATER, "Server busy"))
+            return null
+        }
+
         val identity = try {
             identityVerifier.verify(request, challenge)
         } catch (_: Exception) {
             session.sendMessage(ErrorMessage("Auth failed"))
             session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Auth failed"))
             return null
+        } finally {
+            authenticationChecks.release()
         }
 
         val client = Client(
@@ -131,6 +159,22 @@ class TeamSyncServer(
         } catch (error: Throwable) {
             remove(client)
             throw error
+        }
+    }
+
+    private suspend fun allowAuthentication(): Boolean {
+        val now = System.nanoTime()
+        val cutoff = now - 1_000_000_000L
+        return authenticationRateMutex.withLock {
+            while (authenticationAttempts.isNotEmpty() && authenticationAttempts.first() < cutoff) {
+                authenticationAttempts.removeFirst()
+            }
+            if (authenticationAttempts.size >= MAX_AUTHENTICATIONS_PER_SECOND) {
+                false
+            } else {
+                authenticationAttempts.addLast(now)
+                true
+            }
         }
     }
 
