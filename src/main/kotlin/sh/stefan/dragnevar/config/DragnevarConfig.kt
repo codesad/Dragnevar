@@ -12,9 +12,6 @@ import io.github.notenoughupdates.moulconfig.common.text.StructuredText
 import io.github.notenoughupdates.moulconfig.managed.ManagedConfig
 import net.fabricmc.loader.api.FabricLoader
 import sh.stefan.dragnevar.Dragnevar
-import sh.stefan.dragnevar.config.component.ConfigEditorSizedButton
-import sh.stefan.dragnevar.config.component.SizedButtonEditor
-import sh.stefan.dragnevar.teamsync.TeamCode
 import java.io.File
 import java.util.function.BiConsumer
 import java.util.logging.Level
@@ -81,21 +78,6 @@ class TeamSyncConnectionConfig {
     @JvmField
     var websocketUrl = "wss://stephn.codes/dragnevar/"
 
-    @field:Expose
-    @field:ConfigOption(name = "Team Code", desc = "Share this code with teammates to use Team Sync together.")
-    @field:ConfigEditorText
-    @JvmField
-    var teamCode = ""
-
-    @field:ConfigOption(name = "Generate Team Code", desc = "Creates a new random team code.")
-    @field:ConfigEditorSizedButton(text = "Generate", width = 72)
-    @Transient
-    @JvmField
-    var generateTeamCode = Runnable {
-        teamCode = TeamCode.generate()
-        DragnevarConfig.save()
-    }
-
     @field:ConfigOption(
         name = "Status",
         desc = "Current Team Sync server connection."
@@ -150,9 +132,6 @@ object DragnevarConfig {
             }
             customProcessor(TeamSyncConnectionButton::class.java) { option, _ ->
                 TeamSyncConnectionButtonEditor(option)
-            }
-            customProcessor(ConfigEditorSizedButton::class.java) { option, annotation ->
-                SizedButtonEditor(option, annotation)
             }
             loadFailed = BiConsumer { _, error ->
                 Dragnevar.LOGGER.log(Level.WARNING, "Could not load the config.", error)

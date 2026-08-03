@@ -8,6 +8,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
@@ -16,6 +17,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
 import net.minecraft.client.DeltaTracker
 import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import sh.stefan.dragnevar.Dragnevar
 import java.util.Collections
@@ -56,6 +58,10 @@ interface WorldConnectionFeature {
     fun onWorldLeave() {}
 }
 
+interface GameMessageFeature {
+    fun onGameMessage(message: Component, overlay: Boolean)
+}
+
 object FeatureManager {
     // screens can get initialized again, so don't register another callback for the same one
     private val initializedContainerScreens = Collections.newSetFromMap(
@@ -73,6 +79,7 @@ object FeatureManager {
         val keybindFeatures = features.filterIsInstance<KeybindFeature>()
         val hudRenderFeatures = features.filterIsInstance<HudRenderFeature>()
         val worldConnectionFeatures = features.filterIsInstance<WorldConnectionFeature>()
+        val gameMessageFeatures = features.filterIsInstance<GameMessageFeature>()
 
         keybindFeatures.forEach {
             KeyMappingHelper.registerKeyMapping(it.keyMapping)
@@ -103,6 +110,10 @@ object FeatureManager {
 
         ClientPlayConnectionEvents.DISCONNECT.register { _, _ ->
             worldConnectionFeatures.forEach(WorldConnectionFeature::onWorldLeave)
+        }
+
+        ClientReceiveMessageEvents.GAME.register { message, overlay ->
+            gameMessageFeatures.forEach { it.onGameMessage(message, overlay) }
         }
 
         ScreenEvents.AFTER_INIT.register { _, screen, _, _ ->

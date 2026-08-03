@@ -16,12 +16,13 @@ import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import sh.stefan.dragnevar.Dragnevar
 import sh.stefan.dragnevar.config.DragnevarConfig
-import sh.stefan.dragnevar.teamsync.protocol.WaypointMessages
+import sh.stefan.dragnevar.teamsync.protocol.WaypointPingMessage
 import sh.stefan.dragnevar.utils.Gui
 import sh.stefan.dragnevar.utils.Keybinds
 import sh.stefan.dragnevar.utils.Render
 import sh.stefan.dragnevar.utils.Render.ScreenPosition
 import sh.stefan.dragnevar.waypoint.Waypoint
+import sh.stefan.dragnevar.waypoint.WaypointMessageMapper
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
@@ -40,9 +41,9 @@ object WaypointFeature :
 
     init {
         TeamSyncFeature.registerMessageHandler(
-            WaypointMessages.MESSAGE_TYPE
+            WaypointPingMessage::class
         ) { message ->
-            WaypointMessages.parse(message)?.let(::receiveWaypoint)
+            receiveWaypoint(WaypointMessageMapper.toWaypoint(message))
         }
     }
 
@@ -104,7 +105,7 @@ object WaypointFeature :
         itemName: Component?
     ) {
         if (!TeamSyncFeature.isConnected) {
-            TeamSyncFeature.sendPrefixMessage("&eOpen /rgconfig and connect first.")
+            TeamSyncFeature.sendPrefixMessage("&eJoin a Hypixel party first.")
             return
         }
 
@@ -116,7 +117,7 @@ object WaypointFeature :
 
         val position = hit.blockPos
         val dimension = level.dimension().identifier().toString()
-        val message = WaypointMessages.createPing(position, dimension, itemName)
+        val message = WaypointMessageMapper.toRequest(position, dimension, itemName)
         if (!TeamSyncFeature.send(message)) {
             TeamSyncFeature.sendPrefixMessage("&cThe connection isn't ready.")
             return

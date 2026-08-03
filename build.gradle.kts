@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "2.4.10"
+    kotlin("plugin.serialization") version "2.4.10" apply false
     id("net.fabricmc.fabric-loom") version "1.17-SNAPSHOT"
     id("com.gradleup.shadow") version "9.6.1"
     id("maven-publish")
@@ -16,6 +17,8 @@ val loaderVersion = providers.gradleProperty("loader_version").get()
 val kotlinLoaderVersion = providers.gradleProperty("kotlin_loader_version").get()
 val fabricVersion = providers.gradleProperty("fabric_version").get()
 val moulConfigVersion = providers.gradleProperty("moulconfig_version").get()
+val hypixelModApiVersion = providers.gradleProperty("hypixel_mod_api_version").get()
+val hypixelModFabricVersion = providers.gradleProperty("hypixel_mod_fabric_version").get()
 
 val shadowModImpl = configurations.create("shadowModImpl")
 configurations.named("implementation") {
@@ -32,9 +35,6 @@ base {
 val targetJavaVersion = 25
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
     withSourcesJar()
 }
 
@@ -42,15 +42,28 @@ repositories {
     maven("https://maven.notenoughupdates.org/releases/") {
         name = "NotEnoughUpdates"
     }
+    maven("https://repo.hypixel.net/repository/Hypixel/") {
+        name = "Hypixel"
+    }
+    maven("https://api.modrinth.com/maven") {
+        name = "Modrinth"
+        content {
+            includeGroup("maven.modrinth")
+        }
+    }
 }
 
 dependencies {
-    // To change the versions see the gradle.properties file
     minecraft("com.mojang:minecraft:$minecraftVersion")
     implementation("net.fabricmc:fabric-loader:$loaderVersion")
     implementation("net.fabricmc:fabric-language-kotlin:$kotlinLoaderVersion")
 
     implementation("net.fabricmc.fabric-api:fabric-api:$fabricVersion")
+    compileOnly("net.hypixel:mod-api:$hypixelModApiVersion")
+    runtimeOnly("maven.modrinth:1A2mKfBx:$hypixelModFabricVersion")
+    shadowModImpl(project(":team-sync-protocol")) {
+        isTransitive = false
+    }
     shadowModImpl("org.notenoughupdates.moulconfig:modern-$minecraftVersion:$moulConfigVersion")
 }
 
@@ -91,10 +104,6 @@ tasks.processResources {
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    // ensure that the encoding is set to UTF-8, no matter what the system default is
-    // this fixes some edge cases with special characters not displaying correctly
-    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-    // If Javadoc is generated, this must be specified in that task too.
     options.encoding = "UTF-8"
     options.release.set(targetJavaVersion)
 }
@@ -111,20 +120,11 @@ tasks.assemble {
     dependsOn(tasks.shadowJar)
 }
 
-// configure the maven publication
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             artifactId = archivesBaseName
             from(components["java"])
         }
-    }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-    repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
     }
 }

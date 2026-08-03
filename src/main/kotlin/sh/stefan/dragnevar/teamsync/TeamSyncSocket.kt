@@ -1,16 +1,23 @@
 package sh.stefan.dragnevar.teamsync
 
-import com.google.gson.JsonObject
-import com.google.gson.JsonParser
+import sh.stefan.dragnevar.teamsync.protocol.AuthChallenge
+import sh.stefan.dragnevar.teamsync.protocol.AuthenticatedMessage
+import sh.stefan.dragnevar.teamsync.protocol.ClientMessage
+import sh.stefan.dragnevar.teamsync.protocol.ErrorMessage
+import sh.stefan.dragnevar.teamsync.protocol.JoinedMessage
+import sh.stefan.dragnevar.teamsync.protocol.SelectPartyRequest
+import sh.stefan.dragnevar.teamsync.protocol.ServerMessage
+import sh.stefan.dragnevar.teamsync.protocol.TeamSyncProtocol
+import sh.stefan.dragnevar.teamsync.protocol.TeamSyncSecurity
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.WebSocket
+import java.util.UUID
 import java.util.concurrent.CompletionStage
 
 class TeamSyncSocket(
-    private val onMessage: (JsonObject) -> Unit,
-    private val onStatus: (TeamSyncConnectionState) -> Unit,
-    private val onServerVersion: (String) -> Unit
+    private val onMessage: (ServerMessage) -> Unit,
+    private val onStatus: (TeamSyncConnectionState) -> Unit
 ) {
     private val httpClient = HttpClient.newHttpClient()
 
@@ -20,22 +27,37 @@ class TeamSyncSocket(
     @Volatile
     private var connectionId = 0L
 
-    val isConnected: Boolean
+    @Volatile
+    private var authenticated = false
+
+    @Volatile
+    private var ready = false
+
+    @Volatile
+    private var partyMembers = emptyList<String>()
+
+    val isActive: Boolean
         get() = socket != null
 
-    fun connect(url: String, teamCode: String, playerId: String, playerName: String) {
+    val isConnected: Boolean
+        get() = socket != null && ready
+
+    @Synchronized
+    fun connect(url: String, members: Set<UUID>) {
         disconnect()
+        val uri = URI.create(url)
+        val audience = TeamSyncSecurity.normalizeAudience(url)
+        partyMembers = canonicalMembers(members)
         onStatus(TeamSyncConnectionState.Connecting)
         val id = ++connectionId
-        val join = JoinRequest(teamCode, playerId, playerName)
 
         httpClient.newWebSocketBuilder()
-            .buildAsync(URI.create(url), ConnectionListener(id, join))
+            .buildAsync(uri, ConnectionListener(id, audience))
             .exceptionally { error ->
                 if (connectionId == id) {
                     onStatus(
                         TeamSyncConnectionState.Error(
-                            error.cause?.message ?: error.message ?: "Could not connect."
+                            error.cause?.message ?: error.message ?: "Connection failed"
                         )
                     )
                 }
@@ -43,39 +65,97 @@ class TeamSyncSocket(
             }
     }
 
+    @Synchronized
+    fun selectParty(members: Set<UUID>) {
+        val selected = canonicalMembers(members)
+        if (partyMembers == selected) return
+        partyMembers = selected
+        if (!authenticated) return
+        ready = false
+        onStatus(TeamSyncConnectionState.Connecting)
+        sendControl(SelectPartyRequest(selected))
+    }
+
+    @Synchronized
     fun disconnect() {
         connectionId++
         socket?.sendClose(WebSocket.NORMAL_CLOSURE, "disconnect")
         socket = null
+        authenticated = false
+        ready = false
+        partyMembers = emptyList()
         onStatus(TeamSyncConnectionState.Disconnected)
     }
 
-    fun send(message: JsonObject): Boolean {
+    fun send(message: ClientMessage): Boolean {
         val activeSocket = socket ?: return false
-        activeSocket.sendText(message.toString(), true)
+        if (!ready) return false
+        activeSocket.sendText(TeamSyncProtocol.encode(message), true)
         return true
     }
 
-    private fun handleMessage(rawMessage: String) {
-        val message = runCatching { JsonParser.parseString(rawMessage).asJsonObject }
-            .getOrNull() ?: return
+    private fun handleMessage(
+        id: Long,
+        audience: String,
+        rawMessage: String
+    ) {
+        val message = try {
+            TeamSyncProtocol.decodeServer(rawMessage)
+        } catch (_: Exception) {
+            return
+        }
 
-        when (message.string("type")) {
-            "joined" -> {
+        when (message) {
+            is AuthChallenge -> authenticate(id, audience, message)
+            is AuthenticatedMessage -> {
+                authenticated = true
+                onMessage(message)
+                sendControl(SelectPartyRequest(partyMembers))
+            }
+            is JoinedMessage -> {
+                ready = true
                 onStatus(TeamSyncConnectionState.Connected)
-                message.get("version")?.asString?.let(onServerVersion)
                 onMessage(message)
             }
-            "error" -> onStatus(TeamSyncConnectionState.Error(message.string("message")))
+            is ErrorMessage -> onStatus(TeamSyncConnectionState.Error(message.message))
             else -> onMessage(message)
         }
     }
 
-    private fun JsonObject.string(name: String): String = get(name).asString
+    private fun authenticate(
+        id: Long,
+        audience: String,
+        challenge: AuthChallenge
+    ) {
+        if (authenticated || connectionId != id) return
+        MinecraftIdentity.authenticate(challenge, audience).whenComplete { request, error ->
+            if (connectionId != id) return@whenComplete
+            if (error != null) {
+                onStatus(
+                    TeamSyncConnectionState.Error(
+                        error.cause?.message ?: error.message ?: "Auth failed"
+                    )
+                )
+                socket?.sendClose(WebSocket.NORMAL_CLOSURE, "authentication failed")
+                return@whenComplete
+            }
+            sendControl(request)
+        }
+    }
+
+    private fun sendControl(message: ClientMessage): Boolean {
+        val activeSocket = socket ?: return false
+        activeSocket.sendText(TeamSyncProtocol.encode(message), true)
+        return true
+    }
+
+    private fun canonicalMembers(members: Set<UUID>): List<String> {
+        return members.map { it.toString() }.sorted()
+    }
 
     private inner class ConnectionListener(
         private val id: Long,
-        private val join: JoinRequest
+        private val audience: String
     ) : WebSocket.Listener {
         private val messageBuffer = StringBuilder()
 
@@ -86,13 +166,8 @@ class TeamSyncSocket(
             }
 
             socket = webSocket
-            val message = JsonObject().apply {
-                addProperty("type", "join")
-                addProperty("teamCode", join.teamCode)
-                addProperty("playerId", join.playerId)
-                addProperty("playerName", join.playerName)
-            }
-            webSocket.sendText(message.toString(), true)
+            authenticated = false
+            ready = false
             webSocket.request(1)
         }
 
@@ -105,7 +180,7 @@ class TeamSyncSocket(
 
             messageBuffer.append(data)
             if (last) {
-                handleMessage(messageBuffer.toString())
+                handleMessage(id, audience, messageBuffer.toString())
                 messageBuffer.setLength(0)
             }
             webSocket.request(1)
@@ -119,7 +194,9 @@ class TeamSyncSocket(
         ): CompletionStage<*>? {
             if (connectionId == id) {
                 socket = null
-                val detail = reason.takeIf(String::isNotBlank)?.let { ": $it" }.orEmpty()
+                authenticated = false
+                ready = false
+                val detail = if (reason.isBlank()) "" else ": $reason"
                 onStatus(TeamSyncConnectionState.Error("Connection closed$detail"))
             }
             return null
@@ -128,6 +205,8 @@ class TeamSyncSocket(
         override fun onError(webSocket: WebSocket, error: Throwable) {
             if (connectionId == id) {
                 socket = null
+                authenticated = false
+                ready = false
                 onStatus(
                     TeamSyncConnectionState.Error(
                         error.message ?: error.javaClass.simpleName
@@ -136,10 +215,4 @@ class TeamSyncSocket(
             }
         }
     }
-
-    private data class JoinRequest(
-        val teamCode: String,
-        val playerId: String,
-        val playerName: String
-    )
 }

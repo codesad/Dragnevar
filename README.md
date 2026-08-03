@@ -23,13 +23,13 @@ install:
 
 run `/rgconfig` in-game to open the config.
 
-for Team Sync, generate a team code and send it to your teammates. they can paste it into the Team Code field and connect.
+Team Sync automatically connects players using Dragnevar who are in the same Hypixel party. the official Hypixel Mod API mod is required.
 
-the included server is used by default. to host your own, run `team-sync-server/server.py`:
+the included server is used by default. to host your own, build and run the Team Sync server:
 
 ```sh
-pip install -r team-sync-server/requirements.txt
-python team-sync-server/server.py
+./gradlew :team-sync-server:shadowJar
+TEAM_SYNC_AUDIENCE=wss://your-public-host/path/ java -jar team-sync-server/build/libs/team-sync-server.jar
 ```
 
-if you self-host, expose it through a `ws://` or `wss://` address your teammates can reach and change the WebSocket URL in the config.
+if you self-host, use the same `ws://` or `wss://` URL for both `TEAM_SYNC_AUDIENCE` and the mod config.

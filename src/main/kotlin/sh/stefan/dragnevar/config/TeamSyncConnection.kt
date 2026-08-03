@@ -37,6 +37,7 @@ class TeamSyncConnectionStatusEditor(option: ProcessedOption) : ComponentEditor(
 private val TeamSyncConnectionState.displayText: String
     get() = when (this) {
         TeamSyncConnectionState.Disconnected -> "§cDisconnected"
+        TeamSyncConnectionState.WaitingForParty -> "§eWaiting for party..."
         TeamSyncConnectionState.Connecting -> "§eConnecting..."
         TeamSyncConnectionState.Connected -> "§aConnected"
         is TeamSyncConnectionState.Error -> "§c$message"
@@ -49,10 +50,7 @@ class TeamSyncConnectionButtonEditor(option: ProcessedOption) : ComponentEditor(
         ConfigButton(
             width = 72,
             text = {
-                if (
-                    TeamSyncFeature.isConnected ||
-                    TeamSyncFeature.connectionState is TeamSyncConnectionState.Connecting
-                ) {
+                if (TeamSyncFeature.isConnectionRequested) {
                     "Disconnect"
                 } else {
                     "Connect"

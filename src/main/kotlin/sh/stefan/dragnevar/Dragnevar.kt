@@ -12,6 +12,7 @@ import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.feature.WaypointFeature
 import sh.stefan.dragnevar.feature.dev.ItemLoreCommand
 import sh.stefan.dragnevar.feature.dev.RavengardCheckCommand
+import sh.stefan.dragnevar.feature.dev.TeamSyncRoomCommand
 import java.util.logging.Logger
 
 class Dragnevar : ModInitializer {
@@ -38,6 +39,7 @@ class Dragnevar : ModInitializer {
             if (FabricLoader.getInstance().isDevelopmentEnvironment) {
                 add(ItemLoreCommand)
                 add(RavengardCheckCommand)
+                add(TeamSyncRoomCommand)
             }
         }
 

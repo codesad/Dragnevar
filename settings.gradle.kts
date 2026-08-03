@@ -6,3 +6,8 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
+
+rootProject.name = "Dragnevar"
+
+include("team-sync-protocol")
+include("team-sync-server")

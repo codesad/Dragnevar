@@ -5,30 +5,6 @@ import io.github.notenoughupdates.moulconfig.common.text.StructuredText
 import io.github.notenoughupdates.moulconfig.gui.GuiComponent
 import io.github.notenoughupdates.moulconfig.gui.GuiImmediateContext
 import io.github.notenoughupdates.moulconfig.gui.MouseEvent
-import io.github.notenoughupdates.moulconfig.gui.editors.ComponentEditor
-import io.github.notenoughupdates.moulconfig.processor.ProcessedOption
-
-@Target(AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class ConfigEditorSizedButton(
-    val text: String,
-    val width: Int = 72
-)
-
-class SizedButtonEditor(
-    option: ProcessedOption,
-    private val settings: ConfigEditorSizedButton
-) : ComponentEditor(option) {
-    private var component: GuiComponent? = null
-
-    override fun getDelegate(): GuiComponent = component ?: wrapComponent(
-        ConfigButton(
-            width = settings.width,
-            text = { settings.text },
-            action = { (option.get() as Runnable).run() }
-        )
-    ).also { component = it }
-}
 
 class ConfigButton(
     private val width: Int,
