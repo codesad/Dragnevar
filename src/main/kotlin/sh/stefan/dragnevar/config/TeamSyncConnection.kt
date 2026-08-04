@@ -6,7 +6,6 @@ import io.github.notenoughupdates.moulconfig.gui.GuiComponent
 import io.github.notenoughupdates.moulconfig.gui.component.TextComponent
 import io.github.notenoughupdates.moulconfig.gui.editors.ComponentEditor
 import io.github.notenoughupdates.moulconfig.processor.ProcessedOption
-import sh.stefan.dragnevar.config.component.ConfigButton
 import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.teamsync.TeamSyncConnectionState
 import java.util.function.Supplier
@@ -14,10 +13,6 @@ import java.util.function.Supplier
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class TeamSyncConnectionStatus
-
-@Target(AnnotationTarget.FIELD)
-@Retention(AnnotationRetention.RUNTIME)
-annotation class TeamSyncConnectionButton
 
 class TeamSyncConnectionStatusEditor(option: ProcessedOption) : ComponentEditor(option) {
     private var component: GuiComponent? = null
@@ -42,21 +37,3 @@ private val TeamSyncConnectionState.displayText: String
         TeamSyncConnectionState.Connected -> "§aConnected"
         is TeamSyncConnectionState.Error -> "§c$message"
     }
-
-class TeamSyncConnectionButtonEditor(option: ProcessedOption) : ComponentEditor(option) {
-    private var component: GuiComponent? = null
-
-    override fun getDelegate(): GuiComponent = component ?: wrapComponent(
-        ConfigButton(
-            width = 72,
-            text = {
-                if (TeamSyncFeature.isConnectionRequested) {
-                    "Disconnect"
-                } else {
-                    "Connect"
-                }
-            },
-            action = TeamSyncFeature::toggleConnection
-        )
-    ).also { component = it }
-}

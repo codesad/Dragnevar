@@ -37,7 +37,7 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
         ::showStatus
     )
     private val partyProvider = HypixelPartyProvider(::receiveParty)
-    private var wasEnabled = DragnevarConfig.values.teamSync.enabled
+    private var wasEnabled = DragnevarConfig.values.teamSync.connection.enabled
     private var connectionRequested = false
     private var partyRefreshTicks = 0
     private var partyMembers: Set<UUID>? = null
@@ -48,9 +48,6 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
 
     val isConnected: Boolean
         get() = socket.isConnected
-
-    val isConnectionRequested: Boolean
-        get() = connectionRequested
 
     val members: List<TeamMember>
         get() = teamMembers.values.sortedBy(TeamMember::playerName)
@@ -68,7 +65,7 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
     }
 
     override fun onWorldJoin() {
-        if (!DragnevarConfig.values.teamSync.enabled) return
+        if (!DragnevarConfig.values.teamSync.connection.enabled) return
         startConnection()
     }
 
@@ -77,7 +74,7 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
     }
 
     override fun onTick() {
-        val enabled = DragnevarConfig.values.teamSync.enabled
+        val enabled = DragnevarConfig.values.teamSync.connection.enabled
         if (enabled != wasEnabled) {
             wasEnabled = enabled
             if (!enabled) {
@@ -107,24 +104,10 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
     }
 
     fun send(message: ClientMessage): Boolean =
-        DragnevarConfig.values.teamSync.enabled && socket.send(message)
+        DragnevarConfig.values.teamSync.connection.enabled && socket.send(message)
 
     fun sendPrefixMessage(message: String) {
         Chat.sendPrefixMessage(MESSAGE_PREFIX + message)
-    }
-
-    fun toggleConnection() {
-        if (connectionRequested) {
-            stopConnection()
-            return
-        }
-        if (!DragnevarConfig.values.teamSync.enabled) {
-            sendPrefixMessage("&eEnable Team Sync first.")
-            return
-        }
-
-        DragnevarConfig.save()
-        startConnection()
     }
 
     private fun startConnection() {
@@ -159,12 +142,12 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
     }
 
     private fun refreshParty() {
-        if (!connectionRequested || !DragnevarConfig.values.teamSync.enabled) return
+        if (!connectionRequested || !DragnevarConfig.values.teamSync.connection.enabled) return
         requestParty()
     }
 
     private fun receiveParty(members: Set<UUID>?) {
-        if (!connectionRequested || !DragnevarConfig.values.teamSync.enabled) return
+        if (!connectionRequested || !DragnevarConfig.values.teamSync.connection.enabled) return
         if (members == null) {
             partyMembers = null
             if (socket.isActive) disconnect()
@@ -196,7 +179,7 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
     }
 
     private fun receiveMessage(message: ServerMessage) {
-        if (!DragnevarConfig.values.teamSync.enabled) return
+        if (!DragnevarConfig.values.teamSync.connection.enabled) return
 
         when (message) {
             is AuthenticatedMessage -> checkServerVersion(message.version)

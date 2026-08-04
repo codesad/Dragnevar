@@ -55,12 +55,6 @@ class ItemConfig {
 
 class TeamSyncConfig {
     @field:Expose
-    @field:ConfigOption(name = "Enabled", desc = "Enables shared Team Sync features.")
-    @field:ConfigEditorBoolean
-    @JvmField
-    var enabled = true
-
-    @field:Expose
     @field:Category(name = "Connection", desc = "Team Sync server connection.")
     @JvmField
     var connection = TeamSyncConnectionConfig()
@@ -72,6 +66,12 @@ class TeamSyncConfig {
 }
 
 class TeamSyncConnectionConfig {
+    @field:Expose
+    @field:ConfigOption(name = "Enabled", desc = "Enables shared Team Sync features.")
+    @field:ConfigEditorBoolean
+    @JvmField
+    var enabled = true
+
     @field:Expose
     @field:ConfigOption(
         name = "WebSocket URL",
@@ -89,12 +89,6 @@ class TeamSyncConnectionConfig {
     @Transient
     @JvmField
     var connectionStatus = Unit
-
-    @field:ConfigOption(name = "Connection", desc = "Connects to or disconnects from Team Sync.")
-    @field:TeamSyncConnectionButton
-    @Transient
-    @JvmField
-    var connectionAction = Unit
 }
 
 class WaypointConfig {
@@ -132,9 +126,6 @@ object DragnevarConfig {
         managed = ManagedConfig.create(configFile, DragnevarConfigData::class.java) {
             customProcessor(TeamSyncConnectionStatus::class.java) { option, _ ->
                 TeamSyncConnectionStatusEditor(option)
-            }
-            customProcessor(TeamSyncConnectionButton::class.java) { option, _ ->
-                TeamSyncConnectionButtonEditor(option)
             }
             loadFailed = BiConsumer { _, error ->
                 Dragnevar.LOGGER.log(Level.WARNING, "Could not load the config.", error)
