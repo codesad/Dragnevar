@@ -109,13 +109,17 @@ object WaypointFeature :
             return
         }
 
-        val hit = player.pick(RAYCAST_DISTANCE, 1.0f, false)
-        if (hit.type != HitResult.Type.BLOCK || hit !is BlockHitResult) {
-            TeamSyncFeature.sendPrefixMessage("&cYou aren't looking at a block.")
-            return
+        val position = if (itemName != null) {
+            player.blockPosition()
+        } else {
+            val hit = player.pick(RAYCAST_DISTANCE, 1.0f, false)
+            if (hit.type != HitResult.Type.BLOCK || hit !is BlockHitResult) {
+                TeamSyncFeature.sendPrefixMessage("&cYou aren't looking at a block.")
+                return
+            }
+            hit.blockPos
         }
 
-        val position = hit.blockPos
         val dimension = level.dimension().identifier().toString()
         val message = WaypointMessageMapper.toRequest(position, dimension, itemName)
         if (!TeamSyncFeature.send(message)) {
