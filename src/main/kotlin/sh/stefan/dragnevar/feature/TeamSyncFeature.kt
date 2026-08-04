@@ -25,6 +25,7 @@ import kotlin.reflect.KClass
 object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMessageFeature {
     private const val MESSAGE_PREFIX = "&b[TS] &r"
     private const val PARTY_REFRESH_TICKS = 200
+    private const val PARTY_CHANGE_DELAY_TICKS = 20
     private val partyChangeMessage = Regex(
         "^(?:\\[[A-Z0-9+]+] )?[A-Za-z0-9_]{1,16} " +
             "(?:joined the party|has left the party)\\.$"
@@ -89,7 +90,7 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
     }
 
     override fun onGameMessage(message: Component, overlay: Boolean) {
-        if (!overlay && partyChangeMessage.matches(message.string)) refreshParty()
+        if (!overlay && partyChangeMessage.matches(message.string)) schedulePartyRefresh()
     }
 
     fun <T : ServerMessage> registerMessageHandler(
@@ -141,9 +142,9 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
         partyProvider.request()
     }
 
-    private fun refreshParty() {
+    private fun schedulePartyRefresh() {
         if (!connectionRequested || !DragnevarConfig.values.teamSync.connection.enabled) return
-        requestParty()
+        partyRefreshTicks = PARTY_CHANGE_DELAY_TICKS
     }
 
     private fun receiveParty(members: Set<UUID>?) {
