@@ -176,7 +176,9 @@ object TeamSyncFeature : Feature(), WorldConnectionFeature, TickFeature, GameMes
             } else {
                 socket.connect(url, members)
             }
-        }.onFailure(::showConnectionError)
+        }.onFailure {
+            logger.warning("Failed to connect to Team Sync:\n${it.stackTraceToString()}")
+        }
     }
 
     private fun receiveMessage(message: ServerMessage) {

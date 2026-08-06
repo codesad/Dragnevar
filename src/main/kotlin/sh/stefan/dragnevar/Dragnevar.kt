@@ -10,6 +10,7 @@ import sh.stefan.dragnevar.feature.FeatureManager
 import sh.stefan.dragnevar.feature.ItemHighlighter
 import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.feature.WaypointFeature
+import sh.stefan.dragnevar.feature.dev.FakePartyMemberCommand
 import sh.stefan.dragnevar.feature.dev.ItemLoreCommand
 import sh.stefan.dragnevar.feature.dev.RavengardCheckCommand
 import sh.stefan.dragnevar.feature.dev.TeamSyncRoomCommand
@@ -37,6 +38,7 @@ class Dragnevar : ModInitializer {
             add(WaypointFeature)
 
             if (FabricLoader.getInstance().isDevelopmentEnvironment) {
+                add(FakePartyMemberCommand)
                 add(ItemLoreCommand)
                 add(RavengardCheckCommand)
                 add(TeamSyncRoomCommand)
