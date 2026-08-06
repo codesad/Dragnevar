@@ -13,6 +13,10 @@ object ClassDetector : Feature(), ContainerOpenFeature, WorldConnectionFeature {
     var currentProfile: Profile? = null
         private set
 
+    internal fun setProfile(profile: Profile) {
+        currentProfile = profile
+    }
+
     override fun onWorldJoin() {
         if (RavengardDetector.isOnRavengard() && currentProfile == null) {
             Chat.sendPrefixMessage(

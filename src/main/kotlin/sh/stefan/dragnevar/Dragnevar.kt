@@ -12,7 +12,9 @@ import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.feature.WaypointFeature
 import sh.stefan.dragnevar.feature.dev.FakePartyMemberCommand
 import sh.stefan.dragnevar.feature.dev.ItemLoreCommand
+import sh.stefan.dragnevar.feature.dev.MockItemCommand
 import sh.stefan.dragnevar.feature.dev.RavengardCheckCommand
+import sh.stefan.dragnevar.feature.dev.SetClassCommand
 import sh.stefan.dragnevar.feature.dev.TeamSyncRoomCommand
 import java.util.logging.Logger
 
@@ -40,7 +42,9 @@ class Dragnevar : ModInitializer {
             if (FabricLoader.getInstance().isDevelopmentEnvironment) {
                 add(FakePartyMemberCommand)
                 add(ItemLoreCommand)
+                add(MockItemCommand)
                 add(RavengardCheckCommand)
+                add(SetClassCommand)
                 add(TeamSyncRoomCommand)
             }
         }
