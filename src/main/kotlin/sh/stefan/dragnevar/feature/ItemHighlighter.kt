@@ -19,13 +19,10 @@ import sh.stefan.dragnevar.ravengard.item.type.ArmorType
 import sh.stefan.dragnevar.utils.ItemRender
 
 object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
-    private const val ARMOR_COLOR = 0xA0007BFF.toInt()
-    private const val ACCESSORY_COLOR = 0xA000E65C.toInt()
-    private const val WEAPON_COLOR = 0xA0B000FF.toInt()
-    private const val CONSUMABLE_COLOR = 0xA0F54927.toInt()
     private const val PRICE_COLOR = 0xFFFFD700.toInt()
     private const val HEALING_COLOR = 0xFFFF5555.toInt()
     private const val HEALING_DURATION_COLOR = 0xFFFFFF55.toInt()
+
     private const val TEXT_SCALE = 0.5f
     private const val PROFILE_TEXT_Y_OFFSET = 11
     private const val TEXT_BACKGROUND_COLOR = 0x60000000
@@ -136,7 +133,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
                 slot.x,
                 slot.y,
                 highlight.outline,
-                highlight.color
+                colorOf(highlight.group)
             )
         }
         state.itemOverlays[slot.index]?.let { overlay ->
@@ -224,7 +221,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
             .filter { isBetterThanEquippedArmor(it.item, equippedArmor) }
             .associate {
                 it.menuSlotIndex to ItemHighlight(
-                    color = colorOf(it.item),
+                    group = it.item.group,
                     outline = ItemRender.outlineOf(it.item.stack)
                 )
             }
@@ -254,14 +251,15 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
         }.toMap()
     }
 
-    private fun colorOf(item: RavengardItem): Int {
-        return when (item.group) {
-            is RavengardItemGroup.Armor -> ARMOR_COLOR
-            is RavengardItemGroup.Accessory -> ACCESSORY_COLOR
-            is RavengardItemGroup.Consumable -> CONSUMABLE_COLOR
-            RavengardItemGroup.Weapon -> WEAPON_COLOR
+    private fun colorOf(group: RavengardItemGroup): Int =
+        with(DragnevarConfig.values.items) {
+            when (group) {
+                is RavengardItemGroup.Armor -> armorHighlightColor
+                is RavengardItemGroup.Accessory -> accessoryHighlightColor
+                is RavengardItemGroup.Consumable -> consumableHighlightColor
+                RavengardItemGroup.Weapon -> weaponHighlightColor
+            }.getEffectiveColourRGB()
         }
-    }
 
     private class MenuState(
         val menu: AbstractContainerMenu,
@@ -278,7 +276,7 @@ object ItemHighlighter : Feature(), ContainerOpenFeature, TickFeature {
     )
 
     private class ItemHighlight(
-        val color: Int,
+        val group: RavengardItemGroup,
         val outline: List<ItemRender.OutlineSpan>
     )
 

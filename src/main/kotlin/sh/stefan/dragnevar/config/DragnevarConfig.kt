@@ -1,9 +1,11 @@
 package sh.stefan.dragnevar.config
 
 import com.google.gson.annotations.Expose
+import io.github.notenoughupdates.moulconfig.ChromaColour
 import io.github.notenoughupdates.moulconfig.Config
 import io.github.notenoughupdates.moulconfig.annotations.Category
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorBoolean
+import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorColour
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorDropdown
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorSlider
 import io.github.notenoughupdates.moulconfig.annotations.ConfigEditorText
@@ -34,6 +36,30 @@ class DragnevarConfigData : Config() {
 }
 
 class ItemConfig {
+    @field:Expose
+    @field:ConfigOption(name = "Armor Highlight Color", desc = "Outline color for armor upgrades.")
+    @field:ConfigEditorColour
+    @JvmField
+    var armorHighlightColor = ChromaColour.fromStaticRGB(0x00, 0x7B, 0xFF, 0xA0)
+
+    @field:Expose
+    @field:ConfigOption(name = "Accessory Highlight Color", desc = "Outline color for accessory upgrades.")
+    @field:ConfigEditorColour
+    @JvmField
+    var accessoryHighlightColor = ChromaColour.fromStaticRGB(0x00, 0xE6, 0x5C, 0xA0)
+
+    @field:Expose
+    @field:ConfigOption(name = "Weapon Highlight Color", desc = "Outline color for weapon upgrades.")
+    @field:ConfigEditorColour
+    @JvmField
+    var weaponHighlightColor = ChromaColour.fromStaticRGB(0xB0, 0x00, 0xFF, 0xA0)
+
+    @field:Expose
+    @field:ConfigOption(name = "Consumable Highlight Color", desc = "Outline color for consumables.")
+    @field:ConfigEditorColour
+    @JvmField
+    var consumableHighlightColor = ChromaColour.fromStaticRGB(0xF5, 0x49, 0x27, 0xA0)
+
     @field:Expose
     @field:ConfigOption(
         name = "Weapon Priority",
