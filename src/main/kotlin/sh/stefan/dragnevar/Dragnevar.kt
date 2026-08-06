@@ -8,6 +8,7 @@ import sh.stefan.dragnevar.feature.ClassDetector
 import sh.stefan.dragnevar.feature.ConfigCommand
 import sh.stefan.dragnevar.feature.FeatureManager
 import sh.stefan.dragnevar.feature.ItemHighlighter
+import sh.stefan.dragnevar.feature.LootReplacementFeature
 import sh.stefan.dragnevar.feature.TeamSyncFeature
 import sh.stefan.dragnevar.feature.WaypointFeature
 import sh.stefan.dragnevar.feature.dev.FakePartyMemberCommand
@@ -36,6 +37,7 @@ class Dragnevar : ModInitializer {
             add(ConfigCommand)
             add(ClassDetector)
             add(ItemHighlighter)
+            add(LootReplacementFeature)
             add(TeamSyncFeature)
             add(WaypointFeature)
 

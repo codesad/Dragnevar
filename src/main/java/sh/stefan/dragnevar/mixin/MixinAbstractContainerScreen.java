@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import sh.stefan.dragnevar.feature.ItemHighlighter;
+import sh.stefan.dragnevar.feature.LootReplacementFeature;
 
 @Mixin(AbstractContainerScreen.class)
 public abstract class MixinAbstractContainerScreen extends Screen {
@@ -20,8 +21,33 @@ public abstract class MixinAbstractContainerScreen extends Screen {
     @Final
     protected AbstractContainerMenu menu;
 
+    @Shadow
+    protected Slot hoveredSlot;
+
+    @Shadow
+    protected int leftPos;
+
+    @Shadow
+    protected int topPos;
+
     protected MixinAbstractContainerScreen(Component title) {
         super(title);
+    }
+
+    @Inject(method = "extractSlots", at = @At("TAIL"))
+    private void dragnevar$extractSlotConnections(
+            GuiGraphicsExtractor graphics,
+            int mouseX,
+            int mouseY,
+            CallbackInfo ci
+    ) {
+        LootReplacementFeature.renderContainerBackground(
+                this.menu,
+                graphics,
+                this.hoveredSlot,
+                mouseX - this.leftPos,
+                mouseY - this.topPos
+        );
     }
 
     @Inject(method = "extractSlot", at = @At("TAIL"))

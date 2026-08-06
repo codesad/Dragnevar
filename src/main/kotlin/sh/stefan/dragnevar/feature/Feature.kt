@@ -122,7 +122,7 @@ object FeatureManager {
                     it.keyMapping.matchesMouse(event)
                 }
                 matchingFeatures.forEach(KeybindFeature::onKeybind)
-                matchingFeatures.isEmpty()
+                true
             }
 
             ScreenKeyboardEvents.allowKeyPress(screen).register { _, event ->
@@ -145,4 +145,5 @@ object FeatureManager {
             }
         }
     }
+
 }

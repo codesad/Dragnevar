@@ -7,9 +7,45 @@ import net.minecraft.world.phys.Vec3
 import org.joml.Vector4f
 import java.util.UUID
 import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 object Render {
+    fun drawDashedLine(
+        graphics: GuiGraphicsExtractor,
+        startX: Int,
+        startY: Int,
+        endX: Int,
+        endY: Int,
+        color: Int,
+        dashLength: Float = 4.0f,
+        gapLength: Float = 3.0f
+    ) {
+        val deltaX = (endX - startX).toFloat()
+        val deltaY = (endY - startY).toFloat()
+        val length = hypot(deltaX, deltaY)
+        if (length == 0.0f) return
+
+        val pose = graphics.pose()
+        pose.pushMatrix()
+        pose.translate(startX.toFloat(), startY.toFloat())
+        pose.rotate(atan2(deltaY, deltaX))
+
+        var dashStart = 0.0f
+        while (dashStart < length) {
+            val dashEnd = min(dashStart + dashLength, length)
+            val start = dashStart.roundToInt()
+            val end = dashEnd.roundToInt().coerceAtLeast(start + 1)
+
+            graphics.fill(start, 0, end, 1, color)
+            dashStart += dashLength + gapLength
+        }
+
+        pose.popMatrix()
+    }
+
     fun projectToScreen(
         graphics: GuiGraphicsExtractor,
         camera: CameraRenderState,

@@ -37,6 +37,15 @@ class DragnevarConfigData : Config() {
 
 class ItemConfig {
     @field:Expose
+    @field:ConfigOption(
+        name = "Loot Replacement Lines",
+        desc = "Shows which cheaper inventory items should be replaced by more valuable loot. Only appears when your inventory is full."
+    )
+    @field:ConfigEditorBoolean
+    @JvmField
+    var showLootReplacementLines = true
+
+    @field:Expose
     @field:ConfigOption(name = "Armor Highlight Color", desc = "Outline color for armor upgrades.")
     @field:ConfigEditorColour
     @JvmField
