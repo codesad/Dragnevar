@@ -1,35 +1,39 @@
 # Dragnevar
 
-a state-of-the-art ravengard mod! (because there isn't another one)
+A state-of-the-art Ravengard mod!
 
-[download the latest release](https://github.com/codesad/Dragnevar/releases/latest)
+[Download the latest release](https://github.com/codesad/Dragnevar/releases/latest)
 
-# important
+## Important
 
-open the ravengard main menu once after joining so the mod can detect your class. item highlights mean it's working.
+Open the Ravengard Main Menu once after joining so the mod can detect your class. Item highlights mean it's working.
 
-# features
+## Features
 
-- highlights the best gear for your current class
-- highlights every healing consumable
-- lets you ping locations and hovered items to teammates with middle click
+- Highlights the best gear for your current class.
+- Highlights every healing consumable.
+- Shows which cheaper inventory items to replace with more valuable loot.
+- Lets you ping locations and hovered items to teammates with middle-click.
 
-# setup
+## Setup
 
-install:
+Install the following dependencies:
 
-- fabric language kotlin
-- fabric api
+- Fabric Language Kotlin
+- Fabric API
 
-run `/rgconfig` in-game to open the config.
+Run `/rgconfig` in-game to open the configuration screen.
 
-Team Sync automatically connects players using Dragnevar who are in the same Hypixel party. the official Hypixel Mod API mod is required.
+## Team Sync
 
-the included server is used by default. to host your own, build and run the Team Sync server:
+Team Sync automatically connects players using Dragnevar who are in the same Hypixel party.
+
+The included server is used by default. To host your own, build and run the Team Sync server:
 
 ```sh
 ./gradlew :team-sync-server:shadowJar
-TEAM_SYNC_AUDIENCE=wss://your-public-host/path/ java -jar team-sync-server/build/libs/team-sync-server.jar
+TEAM_SYNC_AUDIENCE="wss://your-public-host/path/" \
+  java -jar team-sync-server/build/libs/team-sync-server.jar
 ```
 
-if you self-host, use the same `ws://` or `wss://` URL for both `TEAM_SYNC_AUDIENCE` and the mod config.
+If you self-host, use the same `ws://` or `wss://` URL for both `TEAM_SYNC_AUDIENCE` and the mod configuration.
